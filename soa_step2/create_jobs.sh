@@ -4,7 +4,7 @@ NAME="fwave_soa"
 COMPILERS=("ifort")
 #"-xavx" "-O3" "-ipo" "-O2 -pg"
 #FLAGS=("-O2 -pg" "-xavx" "-O3" "-ipo" "-O2 -pg -fp-model=precise" "-ipo -fp-model=precise")
-FLAGS=("-O2" "-O3" "-pg" "-xavx" "-ipo")
+FLAGS=("-O2" "-O3 -pg" "-xavx" "-ipo")
 #RESOLUTIONS=("120" "360" "400") # Check that amr_module.f90:max1d is set properly 
 # TODO: TRESOLUTIONS=(...)
 

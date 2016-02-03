@@ -51,10 +51,10 @@
 !      !!!SOA!!!
       double precision  ql(1-mbc:maxm+mbc, meqn)
       double precision  qr(1-mbc:maxm+mbc, meqn)
+      double precision  auxl(1-mbc:maxm+mbc,maux)
+      double precision  auxr(1-mbc:maxm+mbc,maux)
       double precision  apdq(meqn,1-mbc:maxm+mbc)
       double precision  amdq(meqn,1-mbc:maxm+mbc)
-      double precision  auxl(maux,1-mbc:maxm+mbc)
-      double precision  auxr(maux,1-mbc:maxm+mbc)
 
       !local only
       integer m,i,mw,maxiter,mu,nv
@@ -126,8 +126,8 @@
          hR = ql(i,1) 
          huL = qr(i-1,mu) 
          huR = ql(i,mu) 
-         bL = auxr(1,i-1)
-         bR = auxl(1,i)
+         bL = auxr(i-1,1)
+         bR = auxl(i,1)
 
          hvL=qr(i-1,nv) 
          hvR=ql(i,nv)
@@ -246,7 +246,7 @@
           if (ixy.eq.1) then
              dxdc=(earth_radius*deg2rad)
           else
-             dxdc=earth_radius*cos(auxl(3,i))*deg2rad
+             dxdc=earth_radius*cos(auxl(i,3))*deg2rad
           endif
 
           do mw=1,mwaves
