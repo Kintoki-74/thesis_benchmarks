@@ -52,12 +52,8 @@ MODULES = \
  $(GEOLIB)/friction_module.f90
 
 SOURCES = \
-  $(HERE)/src/rpn2_geoclaw.f90 \
-  $(HERE)/src/rpt2_geoclaw.f90 \
-  $(HERE)/src/qad.f \
+  $(HERE)/src/rpn2_geoclaw.f \
   $(HERE)/src/amr2.f90 \
-  $(HERE)/src/step2.f90 \
-  $(HERE)/src/flux2fw.f \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/qinit.f90 \
   $(GEOLIB)/topo_update.f90 \
@@ -65,9 +61,13 @@ SOURCES = \
   $(GEOLIB)/topointegral.f \
   $(GEOLIB)/bilinearintegral.f \
   $(GEOLIB)/stepgrid.f \
+  $(CLAW)/riemann/src/rpt2_geoclaw.f \
   $(CLAW)/riemann/src/geoclaw_riemann_utils.f \
   $(GEOLIB)/src2.f90 \
   $(GEOLIB)/src1d.f90 \
+  $(GEOLIB)/step2.f90 \
+  $(GEOLIB)/flux2fw.f \
+  $(GEOLIB)/qad.f \
   $(GEOLIB)/valout.f \
   $(GEOLIB)/filval.f90 \
   $(GEOLIB)/filpatch.f90 \

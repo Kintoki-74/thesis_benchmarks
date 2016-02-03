@@ -1,16 +1,16 @@
 #!/bin/bash
 
-NAME="fwave_soa"
+NAME="fwave_vanilla"
 COMPILERS=("ifort")
 #"-xavx" "-O3" "-ipo" "-O2 -pg"
 #FLAGS=("-O2 -pg" "-xavx" "-O3" "-ipo" "-O2 -pg -fp-model=precise" "-ipo -fp-model=precise")
-FLAGS=("-O2" "-O3" "-pg" "-xavx" "-ipo")
+FLAGS=("-pg")
 #RESOLUTIONS=("120" "360" "400") # Check that amr_module.f90:max1d is set properly 
 # TODO: TRESOLUTIONS=(...)
 
 function usage
 {
-    echo "Usage: ./create_jobs [all|make|runs]"
+    echo "Usage: ./script [all|make|runs]"
     exit 0
 }
 
@@ -31,7 +31,6 @@ function main
             sed -r -e "s/^EXE.*/EXE = ${binname}/" \
                    -e "s/^FFLAGS.*/FFLAGS = ${flags}/" \
                    -e "s/(^CLAW_PKG.*$)/FC=${compiler}\t# Set by script, do not change\n\1/" \
-                   -e "s/^HERE.*/HERE = ../" \
                 Makefile > $tmpdir/Makefile
 
             # If "all" or "compile" was selected, compile if no binary exists
