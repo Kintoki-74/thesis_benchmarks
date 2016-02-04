@@ -23,7 +23,7 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O2 -ipo -fp-model=precise -align array32byte -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2 -qopt-report-file=VECREPORT.optrpt
+FFLAGS ?= -O2 -qopenmp-stubs -qopenmp-simd -ipo -fp-model=precise -align array32byte -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2 -qopt-report-file=VECREPORT.optrpt
 
 # ---------------------------------
 # List of sources for this program:
@@ -54,6 +54,7 @@ MODULES = \
 SOURCES = \
   $(HERE)/src/rpn2_geoclaw.f90 \
   $(HERE)/src/rpt2_geoclaw.f90 \
+  $(HERE)/src/riemann_utils.f90 \
   $(HERE)/src/qad.f \
   $(HERE)/src/amr2.f90 \
   $(HERE)/src/step2.f90 \
@@ -66,7 +67,6 @@ SOURCES = \
   $(GEOLIB)/topointegral.f \
   $(GEOLIB)/bilinearintegral.f \
   $(GEOLIB)/stepgrid.f \
-  $(CLAW)/riemann/src/geoclaw_riemann_utils.f \
   $(GEOLIB)/src2.f90 \
   $(GEOLIB)/src1d.f90 \
   $(GEOLIB)/valout.f \
