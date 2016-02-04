@@ -23,7 +23,7 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= 
+FFLAGS ?= -O2 -ipo -fp-model=precise -align array32byte -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2 -qopt-report-file=VECREPORT.optrpt
 
 # ---------------------------------
 # List of sources for this program:
@@ -58,6 +58,7 @@ SOURCES = \
   $(HERE)/src/amr2.f90 \
   $(HERE)/src/step2.f90 \
   $(HERE)/src/flux2fw.f \
+  $(HERE)/src/inlinelimiter.f \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/qinit.f90 \
   $(GEOLIB)/topo_update.f90 \
@@ -166,7 +167,6 @@ SOURCES = \
   $(AMRLIB)/preintcopy.f \
   $(AMRLIB)/icall.f \
   $(AMRLIB)/preicall.f \
-  $(AMRLIB)/inlinelimiter.f \
   $(AMRLIB)/cstore.f \
   $(AMRLIB)/saveqc.f \
   $(AMRLIB)/check.f \
