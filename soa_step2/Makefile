@@ -23,8 +23,11 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O2 -qopenmp-stubs -qopenmp-simd -ipo -fp-model=precise -align array32byte -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2 -qopt-report-file=VECREPORT.optrpt
-
+FFLAGS ?= -O2 -fp-model=precise -align array32byte -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2 -qopt-report-file=VECREPORT.optrpt
+#-qopenmp-stubs -qopenmp-simd 
+LFLAGS ?= -lpapi
+INCLUDE += $(TACC_PAPI_INC)
+LIB_PATHS += $(TACC_PAPI_LIB)
 # ---------------------------------
 # List of sources for this program:
 # ---------------------------------
@@ -34,9 +37,9 @@ GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
 HERE = .
 
 MODULES = \
- $(HERE)/src/test_module.f90 \
+ $(HERE)/src/amr_module.f90 \
+ $(HERE)/../utils/src/papi_module.f90 \
  $(GEOLIB)/utility_module.f90 \
- $(AMRLIB)/amr_module.f90 \
  $(AMRLIB)/regions_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \
  $(GEOLIB)/gauges_module.f90 \

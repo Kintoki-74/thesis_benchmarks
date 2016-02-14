@@ -94,7 +94,6 @@ program amr2
     use regions_module, only: set_regions
     use gauges_module, only: set_gauges, num_gauges
     use fgmax_module, only: set_fgmax, FG_num_fgrids
-    use test_module
 
     implicit none
 
@@ -826,6 +825,5 @@ program amr2
     ! Close output and debug files.
     close(outunit)
     close(dbugunit)
-    call test_stats()
 
 end program amr2

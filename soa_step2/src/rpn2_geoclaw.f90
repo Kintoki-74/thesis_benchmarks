@@ -36,7 +36,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     use geoclaw_module, only: g => grav, drytol => dry_tolerance
     use geoclaw_module, only: earth_radius, deg2rad
     use amr_module, only: mcapa
-    use test_module
 
     implicit none
     integer, parameter :: DP = kind(1.d0)
@@ -72,8 +71,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     ! Status variable for negative input
     logical :: negative_input = .false.
 
-    call start_timer()
-
     !-----------------------Initializing-----------------------------------
     !set normal direction
     if (ixy.eq.1) then
@@ -95,7 +92,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     !             fwave(3,mw,i)=0.d0
     !         enddo
     !      enddo
-
     !zero (small) negative values if they exist
     do i=2-mbc,mx+mbc
     !         if (qr(i-1,1).lt.0.d0) then
@@ -247,7 +243,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         enddo
     enddo
 
-
     !==========Capacity for mapping from latitude longitude to physical space====
     if (mcapa.gt.0) then
         do i=2-mbc,mx+mbc
@@ -284,6 +279,5 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         enddo
     enddo
 
-    call stop_timer()
     return
 end subroutine
