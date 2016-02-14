@@ -1,10 +1,10 @@
 #!/bin/bash
 
-NAME="fwave_timer"
+NAME="FLOPs_per_Riemann_solve_lowlevel"
 COMPILERS=("ifort")
 
 #FLAGS=("-O2 -pg" "-xavx" "-O3" "-ipo" "-O2 -pg -fp-model=precise" "-ipo -fp-model=precise")
-FLAGS=("-O2 -ipo -fp-model=precise -align array32byte")
+FLAGS=("-O2 -xavx")
 #RESOLUTIONS=("120" "360" "400") # Check that amr_module.f90:max1d is set properly 
 # TODO: TRESOLUTIONS=(...)
 
@@ -26,7 +26,7 @@ function main
             # Binary name containing compiler name and flags
             binname="xgeoclaw_${compiler}${flagstring}"
             # Create temporary directory, copy Makefile to it, sed executable name and flags and build binary
-            tmpdir="_tmp_${compiler}_${flagstring}"
+            tmpdir="_tmp_${NAME}_${compiler}${flagstring}"
             mkdir -p $tmpdir
             sed -r -e "s/^EXE.*/EXE = ${binname}/" \
                    -e "s/^FFLAGS.*/FFLAGS = ${flags}/" \
@@ -51,7 +51,7 @@ function main
                     make new > /dev/null
                     echo "Done!"
                 else
-                    echo "$binname already exists. skipping..."
+                    echo "Directory $tmpdir already exists. skipping..."
                 fi
                 cd ..
             fi 
@@ -62,7 +62,7 @@ function main
             # Runs
 #            for res in "${RESOLUTIONS[@]}";
 #            do
-                dirname="run_${compiler}${flagstring}"
+                dirname="run_${NAME}_${compiler}${flagstring}"
                 mkdir -p $dirname
                 cp $tmpdir/* $dirname # Copy modified Makefile and corresponding binary
                 cp maketopo.py $dirname # This is needed to create topography files
