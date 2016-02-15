@@ -24,7 +24,6 @@ RESTART = False
 
 # Compiler flags can be specified here or set as an environment variable
 FFLAGS ?= 
-LFLAGS ?= -lpapi
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)
 
@@ -57,6 +56,9 @@ else ifeq ($(UNAME), Linux)
 	endif
 endif
 
+# André 2/17/2016
+# TODO: This is weird: If the papi is added to LFLAGS before the MKL libraries, the application compiles fine but crashes when the first call to LAPACK is issued
+LFLAGS += -lpapi
 # ---------------------------------
 # List of sources for this program:
 # ---------------------------------
