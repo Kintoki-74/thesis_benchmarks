@@ -4,5 +4,7 @@
 *.o
 *.mod
 .*
+*.optrpt
+*.data
 xgeoclaw
 VECREPORT*
