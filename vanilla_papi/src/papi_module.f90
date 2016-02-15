@@ -93,8 +93,8 @@ contains
             avg_rims = (avg_rims*(calls-1) &
                 + real(riemann_solves,kind=DP)/total_time) &
                 / real(calls, kind=DP)
-            maxflpops = max(maxflpops/riemann_solves, flpops)
-            minflpops = min(minflpops/riemann_solves, flpops)
+            maxflpops = max(maxflpops, flpops)
+            minflpops = min(minflpops, flpops)
             minrs = min(minrs, riemann_solves)
             maxrs = max(maxrs, riemann_solves)
         endif
