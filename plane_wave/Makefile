@@ -23,56 +23,83 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O2 -fp-model=precise -align array32byte -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2 -qopt-report-file=VECREPORT.optrpt
-#-qopenmp-stubs -qopenmp-simd 
-LFLAGS ?= -lpapi
-INCLUDE += $(TACC_PAPI_INC)
-LIB_PATHS += $(TACC_PAPI_LIB)
+FFLAGS ?=
+
+# Include flags for LAPACK linking
+UNAME = $(shell uname)
+ifeq ($(UNAME), Darwin)
+	ifndef LFLAGS
+		LFLAGS = -framework accelerate $(FFLAGS)
+	else
+		LFLAGS += -framework accelerate $(FFLAGS)
+	endif
+else ifeq ($(UNAME), Linux)
+	ifeq ($(FC), ifort)
+		# Created using Intel MKL Link Line Advisor
+		# Please refer to 
+		# http://software.intel.com/en-us/articles/intel-mkl-link-line-advisor/
+		# for other installation types
+		FFLAGS += -I$(MKLROOT)/include
+		ifndef LFLAGS                                                                                                                                    
+		    LFLAGS =  -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm $(FFLAGS)
+		else
+		    LFLAGS +=  -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_intel_ilp64.a $(MKLROOT)/lib/intel64/libmkl_core.a $(MKLROOT)/lib/intel64/libmkl_sequential.a -Wl,--end-group -lpthread -lm $(FFLAGS)
+		endif
+	else ifeq($(FC), gfortran)
+		ifndef LFLAGS
+			LFLAGS = -llapack $(FFLAGS)
+		else
+			LFLAGS += -llapack $(FFLAGS)
+		endif
+	endif
+endif
+
 # ---------------------------------
 # List of sources for this program:
 # ---------------------------------
 
 AMRLIB = $(CLAW)/amrclaw/src/2d
 GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
-HERE = .
 
 MODULES = \
- $(HERE)/src/amr_module.f90 \
- $(HERE)/../utils/src/papi_module.f90 \
  $(GEOLIB)/utility_module.f90 \
- $(AMRLIB)/regions_module.f90 \
+ $(AMRLIB)/amr_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \
- $(GEOLIB)/gauges_module.f90 \
+ $(AMRLIB)/regions_module.f90 \
  $(GEOLIB)/topo_module.f90 \
- $(GEOLIB)/qinit_module.f90 \
  $(GEOLIB)/refinement_module.f90 \
  $(GEOLIB)/fixedgrids_module.f90 \
  $(GEOLIB)/fgmax_module.f90 \
  $(GEOLIB)/surge/holland_storm_module.f90 \
- $(GEOLIB)/surge/stommel_storm_module.f90 \
  $(GEOLIB)/surge/constant_storm_module.f90 \
+ $(GEOLIB)/surge/stommel_storm_module.f90 \
  $(GEOLIB)/surge/storm_module.f90 \
- $(GEOLIB)/friction_module.f90
+ $(GEOLIB)/multilayer/multilayer_module.f90 \
+ $(GEOLIB)/multilayer/gauges_module.f90 \
+ $(GEOLIB)/friction_module.f90 \
+ ./qinit_module.f90
 
 SOURCES = \
-  $(HERE)/src/rpn2_geoclaw.f90 \
-  $(HERE)/src/rpt2_geoclaw.f90 \
-  $(HERE)/src/riemann_utils.f90 \
-  $(HERE)/src/qad.f \
-  $(HERE)/src/amr2.f90 \
-  $(HERE)/src/step2.f90 \
-  $(HERE)/src/flux2fw.f \
-  $(HERE)/src/inlinelimiter.f \
-  $(GEOLIB)/setprob.f90 \
-  $(GEOLIB)/qinit.f90 \
+  $(GEOLIB)/multilayer/setprob.f90 \
+  ./qinit.f90 \
+  $(GEOLIB)/multilayer/setaux.f90 \
+  $(GEOLIB)/multilayer/b4step2.f90 \
   $(GEOLIB)/topo_update.f90 \
+  $(GEOLIB)/multilayer/getmaxspeed.f90 \
+  $(GEOLIB)/multilayer/stepgrid.f \
+  $(GEOLIB)/multilayer/valout.f \
+  $(GEOLIB)/multilayer/src2.f90 \
+  $(GEOLIB)/movetopo.f \
   $(GEOLIB)/cellgridintegrate2.f \
   $(GEOLIB)/topointegral.f \
   $(GEOLIB)/bilinearintegral.f \
-  $(GEOLIB)/stepgrid.f \
-  $(GEOLIB)/src2.f90 \
+  $(CLAW)/riemann/src/rpn2_layered_shallow_water.f90 \
+  $(CLAW)/riemann/src/rpt2_layered_shallow_water.f90 \
+  $(CLAW)/riemann/src/geoclaw_riemann_utils.f \
   $(GEOLIB)/src1d.f90 \
-  $(GEOLIB)/valout.f \
+  $(GEOLIB)/step2.f90 \
+  $(GEOLIB)/flux2fw.f \
+  $(GEOLIB)/qad.f \
   $(GEOLIB)/filval.f90 \
   $(GEOLIB)/filpatch.f90 \
   $(AMRLIB)/prefilp.f90 \
@@ -81,18 +108,16 @@ SOURCES = \
   $(AMRLIB)/intfil.f \
   $(GEOLIB)/bc2amr.f \
   $(GEOLIB)/update.f \
-  $(GEOLIB)/setaux.f90 \
   $(GEOLIB)/flag2refine2.f90  \
   $(AMRLIB)/flagregions2.f90  \
   $(GEOLIB)/allowflag.f90  \
-  $(GEOLIB)/b4step2.f90 \
   $(GEOLIB)/upbnd.f  \
   $(GEOLIB)/tick.f \
   $(GEOLIB)/setgrd.f \
   $(GEOLIB)/gfixup.f \
   $(GEOLIB)/ginit.f \
-  $(GEOLIB)/getmaxspeed.f90 \
   $(GEOLIB)/advanc.f \
+  $(GEOLIB)/amr2.f90 \
   $(GEOLIB)/fgmax_read.f90 \
   $(GEOLIB)/fgmax_frompatch.f90 \
   $(GEOLIB)/fgmax_interpolate.f90 \
@@ -170,6 +195,7 @@ SOURCES = \
   $(AMRLIB)/preintcopy.f \
   $(AMRLIB)/icall.f \
   $(AMRLIB)/preicall.f \
+  $(AMRLIB)/inlinelimiter.f \
   $(AMRLIB)/cstore.f \
   $(AMRLIB)/saveqc.f \
   $(AMRLIB)/check.f \
@@ -182,14 +208,3 @@ SOURCES = \
 #-------------------------------------------------------------------
 # Include Makefile containing standard definitions and make options:
 include $(CLAWMAKE)
-
-# Construct the topography data
-.PHONY: topo all
-topo:
-	python maketopo.py
-
-all: 
-	$(MAKE) topo
-	$(MAKE) .plots
-	$(MAKE) .htmls
-

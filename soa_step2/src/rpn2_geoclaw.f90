@@ -36,7 +36,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     use geoclaw_module, only: g => grav, drytol => dry_tolerance
     use geoclaw_module, only: earth_radius, deg2rad
     use amr_module, only: mcapa
-    !use papi_module, dp__ => DP
 
     implicit none
     integer, parameter :: DP = kind(1.d0)
@@ -71,7 +70,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     logical :: rare1,rare2
     ! Status variable for negative input
     logical :: negative_input = .false.
-!    call papi_start()
 
     !-----------------------Initializing-----------------------------------
     !set normal direction
@@ -226,6 +224,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
                 bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2,drytol,g,sw,fw)
 
         !        !eliminate ghost fluxes for wall
+        !dir$ simd
         do mw=1,3
             tmp = wall(mw)
             fw(1,mw)=fw(1,mw)*tmp 
@@ -279,7 +278,6 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
             endif
         enddo
     enddo
-!    call papi_stop(mx+2*mbc)
 
     return
 end subroutine

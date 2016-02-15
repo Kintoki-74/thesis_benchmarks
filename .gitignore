@@ -3,5 +3,8 @@
 */_output/
 *.o
 *.mod
+.*
+*/*.data
+*.optrpt
 xgeoclaw
 VECREPORT*
