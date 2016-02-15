@@ -23,7 +23,10 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?=
+FFLAGS ?= 
+LFLAGS ?= -lpapi
+INCLUDE += $(TACC_PAPI_INC)
+LIB_PATHS += $(TACC_PAPI_LIB)
 
 # Include flags for LAPACK linking
 UNAME = $(shell uname)
@@ -60,8 +63,10 @@ endif
 
 AMRLIB = $(CLAW)/amrclaw/src/2d
 GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
+HERE = .
 
 MODULES = \
+ $(HERE)/src/papi_module.f90 \
  $(GEOLIB)/utility_module.f90 \
  $(AMRLIB)/amr_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \
@@ -80,26 +85,27 @@ MODULES = \
  ./qinit_module.f90
 
 SOURCES = \
+  $(HERE)/src/rpn2_layered_shallow_water.f90 \
+  $(HERE)/src/rpt2_layered_shallow_water.f90 \
+  $(HERE)/src/geoclaw_riemann_utils.f \
+  $(HERE)/src/stepgrid.f \
+  $(HERE)/src/qad.f \
+  $(HERE)/src/flux2fw.f \
+  $(HERE)/src/amr2.f90 \
+  $(HERE)/src/step2.f90 \
   $(GEOLIB)/multilayer/setprob.f90 \
   ./qinit.f90 \
   $(GEOLIB)/multilayer/setaux.f90 \
   $(GEOLIB)/multilayer/b4step2.f90 \
   $(GEOLIB)/topo_update.f90 \
   $(GEOLIB)/multilayer/getmaxspeed.f90 \
-  $(GEOLIB)/multilayer/stepgrid.f \
   $(GEOLIB)/multilayer/valout.f \
   $(GEOLIB)/multilayer/src2.f90 \
   $(GEOLIB)/movetopo.f \
   $(GEOLIB)/cellgridintegrate2.f \
   $(GEOLIB)/topointegral.f \
   $(GEOLIB)/bilinearintegral.f \
-  $(CLAW)/riemann/src/rpn2_layered_shallow_water.f90 \
-  $(CLAW)/riemann/src/rpt2_layered_shallow_water.f90 \
-  $(CLAW)/riemann/src/geoclaw_riemann_utils.f \
   $(GEOLIB)/src1d.f90 \
-  $(GEOLIB)/step2.f90 \
-  $(GEOLIB)/flux2fw.f \
-  $(GEOLIB)/qad.f \
   $(GEOLIB)/filval.f90 \
   $(GEOLIB)/filpatch.f90 \
   $(AMRLIB)/prefilp.f90 \
@@ -117,7 +123,6 @@ SOURCES = \
   $(GEOLIB)/gfixup.f \
   $(GEOLIB)/ginit.f \
   $(GEOLIB)/advanc.f \
-  $(GEOLIB)/amr2.f90 \
   $(GEOLIB)/fgmax_read.f90 \
   $(GEOLIB)/fgmax_frompatch.f90 \
   $(GEOLIB)/fgmax_interpolate.f90 \
