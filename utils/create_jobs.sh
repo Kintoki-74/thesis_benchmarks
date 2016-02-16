@@ -17,6 +17,7 @@ function usage
 
 function main
 {
+    basedir="$WORK/${PWD##*/}"
 # TODO: Check if files exist: Makefile, setrun.py, job.sh and maketopo.py
     for compiler in "${COMPILERS[@]}";
     do
@@ -27,7 +28,7 @@ function main
             # Binary name containing compiler name and flags
             binname="xgeoclaw_${compiler}${flagstring}"
             # Create temporary directory, copy Makefile to it, sed executable name and flags and build binary
-            tmpdir="$WORK/_tmp_${NAME}_${compiler}${flagstring}"
+            tmpdir="${basedir}/_tmp_${NAME}_${compiler}${flagstring}"
             mkdir -p $tmpdir
             # We need to escape the directory string in order to use it with sed.
             here=$(echo "`pwd`" | sed -r -e 's/\//\\\//g')
@@ -65,7 +66,7 @@ function main
             # Runs
 #            for res in "${RESOLUTIONS[@]}";
 #            do
-                dirname="$WORK/run_${NAME}_${compiler}${flagstring}"
+                dirname="${basedir}/run_${NAME}_${compiler}${flagstring}"
                 mkdir -p $dirname
                 cp $tmpdir/* $dirname # Copy modified Makefile and corresponding binary
                 cp maketopo.py $dirname # This is needed to create topography files
