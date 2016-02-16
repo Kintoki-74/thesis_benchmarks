@@ -16,7 +16,10 @@ def compute_error(q, qref, n, name):
 if __name__ == '__main__':
     print "Comparison of \"" + sys.argv[1] + "\" and \"" + sys.argv[2] + "\""
 
-    outdir = "/_output/"
+    if len(sys.argv) > 3 and sys.argv[3] == "-o":
+        outdir = "/_output/"
+    else:
+        outdir = ""
     # Load reference solution and test solution
     n = numpy.infty# n-norm
 

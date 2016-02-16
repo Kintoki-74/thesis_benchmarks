@@ -23,7 +23,7 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= 
+FFLAGS ?= #-O2 -fp-model=precise#GCC: -fno-finite-math-only -fmath-errno -ftrapping-math -fsignaling-nans -fno-rounding-math
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)
 
@@ -49,9 +49,9 @@ else ifeq ($(UNAME), Linux)
 		endif
 	else ifeq($(FC), gfortran)
 		ifndef LFLAGS
-			LFLAGS = -llapack $(FFLAGS)
+			LFLAGS = -L$(MKLROOT)/lib/intel64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm
 		else
-			LFLAGS += -llapack $(FFLAGS)
+			LFLAGS += -L$(MKLROOT)/lib/intel64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm
 		endif
 	endif
 endif
@@ -84,7 +84,7 @@ MODULES = \
  $(GEOLIB)/multilayer/multilayer_module.f90 \
  $(GEOLIB)/multilayer/gauges_module.f90 \
  $(GEOLIB)/friction_module.f90 \
- ./qinit_module.f90
+ $(HERE)/src/qinit_module.f90
 
 SOURCES = \
   $(HERE)/src/rpn2_layered_shallow_water.f90 \
@@ -95,8 +95,8 @@ SOURCES = \
   $(HERE)/src/flux2fw.f \
   $(HERE)/src/amr2.f90 \
   $(HERE)/src/step2.f90 \
+  $(HERE)/src/qinit.f90 \
   $(GEOLIB)/multilayer/setprob.f90 \
-  ./qinit.f90 \
   $(GEOLIB)/multilayer/setaux.f90 \
   $(GEOLIB)/multilayer/b4step2.f90 \
   $(GEOLIB)/topo_update.f90 \

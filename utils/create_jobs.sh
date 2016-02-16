@@ -1,10 +1,11 @@
 #!/bin/bash
 
-NAME="FLOPs_per_Riemann_solve_lowlevel"
+NAME="planewave_trans=1_order=1"
 COMPILERS=("ifort")
+#COMPILERS=("gfortran")
 
 #FLAGS=("-O2 -pg" "-xavx" "-O3" "-ipo" "-O2 -pg -fp-model=precise" "-ipo -fp-model=precise")
-FLAGS=("-O2 -xavx")
+FLAGS=("-O2") # -fno-finite-math-only -fmath-errno -ftrapping-math -fsignaling-nans -fno-rounding-math")
 #RESOLUTIONS=("120" "360" "400") # Check that amr_module.f90:max1d is set properly 
 # TODO: TRESOLUTIONS=(...)
 
@@ -26,12 +27,14 @@ function main
             # Binary name containing compiler name and flags
             binname="xgeoclaw_${compiler}${flagstring}"
             # Create temporary directory, copy Makefile to it, sed executable name and flags and build binary
-            tmpdir="_tmp_${NAME}_${compiler}${flagstring}"
+            tmpdir="$WORK/_tmp_${NAME}_${compiler}${flagstring}"
             mkdir -p $tmpdir
+            # We need to escape the directory string in order to use it with sed.
+            here=$(echo "`pwd`" | sed -r -e 's/\//\\\//g')
             sed -r -e "s/^EXE.*/EXE = ${binname}/" \
                    -e "s/^FFLAGS.*/FFLAGS = ${flags}/" \
                    -e "s/(^CLAW_PKG.*$)/FC=${compiler}\t# Set by script, do not change\n\1/" \
-                   -e "s/^HERE.*/HERE = ../" \
+                   -e "s/^HERE.*/HERE = ${here}/" \
                 Makefile > $tmpdir/Makefile
 
             # If "all" or "compile" was selected, compile if no binary exists
@@ -41,7 +44,7 @@ function main
                 then
                     echo "=== BUILDING NEW EXECUTABLE! THIS MIGHT TAKE SOME TIME ==="
                     echo -n "Will build $binname with flags \"$flags\" in "
-                    for i in {3..1}
+                    for i in {1..1} #{3..1}
                     do
                         echo -n "$i... "
                         sleep 1
@@ -53,7 +56,7 @@ function main
                 else
                     echo "Directory $tmpdir already exists. skipping..."
                 fi
-                cd ..
+                cd -
             fi 
             # Skip runs when only "compile" was selected
             if [[ $1 == "make" ]]; then
@@ -62,7 +65,7 @@ function main
             # Runs
 #            for res in "${RESOLUTIONS[@]}";
 #            do
-                dirname="run_${NAME}_${compiler}${flagstring}"
+                dirname="$WORK/run_${NAME}_${compiler}${flagstring}"
                 mkdir -p $dirname
                 cp $tmpdir/* $dirname # Copy modified Makefile and corresponding binary
                 cp maketopo.py $dirname # This is needed to create topography files
@@ -86,7 +89,8 @@ function main
                     # Submit job, hide stdout
                     cd $dirname
                     sbatch job.sh 1> SBATCH_${jobname} & 
-                    cd ..
+                    cd -
+                    ln -i -s $dirname
                 else
                     echo "Skipping..."
                 fi 
