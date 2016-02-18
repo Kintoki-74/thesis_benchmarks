@@ -1,6 +1,7 @@
 subroutine riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR, &
         bL,bR,uL,uR,vL,vR,phiL,phiR,s1,s2,drytol,g,sw,fw)
-    !$omp declare simd(riemann_fwave)
+    !dir$ attributes forceinline :: riemann_fwave
+ 
     ! solve shallow water equations given single left and right states
     ! solution has two waves.
     ! flux - source is decomposed.
@@ -31,9 +32,14 @@ subroutine riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR, &
     deldelphi = -g*0.5d0*(hR+hL)*delb
     delphidecomp = delphi - deldelphi
 
-    !flux decomposition
-    beta1 = (s2*delhu - delphidecomp)/(s2-s1)
-    beta2 = (delphidecomp - s1*delhu)/(s2-s1)
+    if (s2 /= s1) then
+        !flux decomposition
+        beta1 = (s2*delhu - delphidecomp)/(s2-s1)
+        beta2 = (delphidecomp - s1*delhu)/(s2-s1)
+    else
+        beta1 = 0.d0
+        beta2 = 0.d0
+    endif        
 
     sw(1) = s1
     sw(2) = 0.5d0*(s1+s2)
