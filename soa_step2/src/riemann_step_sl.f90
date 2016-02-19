@@ -1,4 +1,5 @@
-subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw, sw)
+subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, & !fw, sw)
+            fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
     !dir$ attributes vector :: solve_single_layer_rp
     use geoclaw_module, only: g => grav
     implicit none
@@ -7,15 +8,19 @@ subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw,
     real(kind=8), intent(in) :: drytol
 
     ! Output
-    real(kind=8), intent(in out) :: fw(3, 3), sw(3)
+    !real(kind=8), intent(in out) :: fw(3, 3), sw(3)
+    real(kind=8), intent(inout) :: sw1, sw2, sw3
+    real(kind=8), intent(inout) :: fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33
 
     ! Locals
     integer :: mw
     real(kind=8), intent(inout) :: hL, hR, huL, huR, hvL, hvR, bL, bR
     real(kind=8) :: uL, uR, vL, vR
-    real(kind=8) :: phiL, phiR, wall(3)
+    real(kind=8) :: phiL, phiR
     real(kind=8) :: hstar, hstartest, s1m, s2m, rare1, rare2, sL, sR, uhat, chat, sRoe1, sRoe2, sE1, sE2
 
+    real(kind=8) :: wall1, wall2, wall3
+    logical :: wallleft, wallright
     ! Parameters (should be anyway)
     integer :: maxiter
 
@@ -49,9 +54,9 @@ subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw,
         hvL=0.d0
      endif
 
-     wall(1) = 1.d0
-     wall(2) = 1.d0
-     wall(3) = 1.d0
+     wall1 = 1.d0
+     wall2 = 1.d0
+     wall3 = 1.d0
 #if 1
      !if (hR.le.drytol) then
      if (hR.lt.drytol) then
@@ -61,8 +66,9 @@ subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw,
         hstartest=max(hL,hstar)
         if (hstartest+bL.lt.bR) then !right state should become ghost values that mirror left for wall problem
 !                bR=hstartest+bL
-           wall(2)=0.d0
-           wall(3)=0.d0
+           wall2=0.d0
+           wall3=0.d0
+           wallleft=.true.
            hR=hL
            huR=-huL
            bR=bL
@@ -80,8 +86,9 @@ subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw,
         hstartest=max(hR,hstar)
         if (hstartest+bR.lt.bL) then  !left state should become ghost values that mirror right
 !               bL=hstartest+bR
-           wall(1)=0.d0
-           wall(2)=0.d0
+           wall1=0.d0
+           wall2=0.d0
+           wallright=.true.
            hL=hR
            huL=-huR
            bL=bR
@@ -92,6 +99,14 @@ subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw,
            bL=hR+bR
         endif
      endif
+!     if (wallleft) then
+!         wall2=0.d0
+!         wall3=0.d0
+!     elseif (wallright) then
+!         wall1=0.d0
+!         wall2=0.d0
+!     endif
+
 #endif
      !determine wave speeds
      sL=uL-sqrt(g*hL) ! 1 wave speed of left state
@@ -116,15 +131,32 @@ subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw,
 #if 1
      ! dir$ forceinline
       call riemann_fwave(3,3,hL,hR,huL,huR,hvL,hvR, &
-       bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2,drytol,g,sw,fw)
+       bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2,drytol,g,& !sw,fw)
+       sw1, sw2, sw3,fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33)
 #endif
 !        !eliminate ghost fluxes for wall
-    do mw=1,3
-        sw(mw)  =sw(mw)*wall(mw)
-        fw(1,mw)=fw(1,mw)*wall(mw) 
-        fw(2,mw)=fw(2,mw)*wall(mw)
-        fw(3,mw)=fw(3,mw)*wall(mw)
-    enddo
+    sw1 = sw1 * wall1
+    sw2 = sw2 * wall2
+    sw3 = sw3 * wall3
+
+    ! mw = 1
+    fw11=fw11*wall1 
+    fw21=fw21*wall1
+    fw31=fw31*wall1
+    ! mw = 2
+    fw12=fw12*wall2 
+    fw22=fw22*wall2
+    fw32=fw32*wall2
+    ! mw = 3
+    fw13=fw13*wall3 
+    fw23=fw23*wall3
+    fw33=fw33*wall3
+!    do mw=1,3
+!        sw(mw)  =sw(mw)*wall(mw)
+!        fw(1,mw)=fw(1,mw)*wall(mw) 
+!        fw(2,mw)=fw(2,mw)*wall(mw)
+!        fw(3,mw)=fw(3,mw)*wall(mw)
+!    enddo
     
 !    do mw=1,mwaves
 !        s(i,mw)=sw(mw)

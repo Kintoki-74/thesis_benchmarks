@@ -115,7 +115,7 @@ contains
         if (riemannstats) then
             write(*,*)          "======= RPN2 STATS ========"
             write(*,'(a,f14.3)')"=> RIEMANN SOLVES/SECOND (AVG):", avg_rims
-            write(*,'(a,2i8)')  "=> MIN/MAX FP OPS PER CALL:", &
+            write(*,'(a,2i8)')  "=> MIN/MAX FP OPS PER RIEMANN SOLVE (AVG):", &
                 minflpops, maxflpops 
             write(*,'(a,2i8)')  "=> MIN/MAX RIEMANN SOLVES PER CALL:", minrs, maxrs
         endif

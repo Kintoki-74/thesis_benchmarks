@@ -55,8 +55,10 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     !local only
     integer m,i,mw,maxiter,mu,nv
     real(kind=DP) :: wall(3)
-    real(kind=DP), dimension(3,3) :: fw
-    real(kind=DP) :: sw(3)
+    !real(kind=DP), dimension(3,3) :: fw
+    !real(kind=DP) :: sw(3)
+    real(kind=DP) :: sw1, sw2, sw3
+    real(kind=DP) :: fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33
 
     real(kind=DP) :: hR,hL,huR,huL,uR,uL,hvR,hvL,vR,vL,phiR,phiL
     real(kind=DP) :: bR,bL,sL,sR,sRoe1,sRoe2,sE1,sE2,uhat,chat
@@ -118,7 +120,8 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     !----------------------------------------------------------------------
     !loop through Riemann problems at each grid cell
 
-    ! dir$ simd private(hL,hR,huL,huR,hvL,hvR,bL,bR)
+    !dir$ simd private(hL,hR,huL,huR,hvL,hvR,bL,bR,&
+    !dir$ fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3) 
     do i=2-mbc,mx+mbc
         !skip problem if in a completely dry area
 !        if (qr(i-1,1) <= drytol .and. ql(i,1) <= drytol) then
@@ -147,27 +150,30 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
 
         !call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw, sw)
         call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
-            fw,sw)
-!            fwave(:,:,i), s(i,:))
-
-        do mw=1,3!mwaves
-            s(i,mw)=sw(mw)
-            fwave(1,mw,i)=fw(1,mw)
-            fwave(mu,mw,i)=fw(2,mw)
-            fwave(nv,mw,i)=fw(3,mw)
-        enddo
+            fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
+        s(i,1) = sw1
+        s(i,2) = sw2
+        s(i,3) = sw3
+        ! mw=1
+        fwave(1, 1,i) = fw11
+        fwave(mu,1,i) = fw21
+        fwave(nv,1,i) = fw31
+        ! mw=2
+        fwave(1, 2,i) = fw12
+        fwave(mu,2,i) = fw22
+        fwave(nv,2,i) = fw32
+        ! mw=3
+        fwave(1, 3,i) = fw13
+        fwave(mu,3,i) = fw23
+        fwave(nv,3,i) = fw33
+!        do mw=1,3!mwaves
+!            s(i,mw)=sw(mw)
+!            fwave(1,mw,i)=fw(1,mw)
+!            fwave(mu,mw,i)=fw(2,mw)
+!            fwave(nv,mw,i)=fw(3,mw)
+!        enddo
     enddo
-#if 0
-    if (ixy.ne.1) then
-        do i=2-mbc,mx+mbc
-            do mw=1,3
-                tmp = fwave(2,mw,i)
-                fwave(2,mw,i) = fwave(3,mw,i)
-                fwave(3,mw,i) = tmp
-            enddo
-        enddo
-    endif
-#endif
+    
     !==========Capacity for mapping from latitude longitude to physical space====
     if (mcapa.gt.0) then
         do i=2-mbc,mx+mbc
