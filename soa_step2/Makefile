@@ -38,7 +38,7 @@ HERE = .
 
 MODULES = \
  $(HERE)/src/amr_module.f90 \
- $(HERE)/../utils/src/papi_module.f90 \
+ $(HERE)/src/papi_module.f90 \
  $(GEOLIB)/utility_module.f90 \
  $(AMRLIB)/regions_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \
@@ -61,7 +61,7 @@ SOURCES = \
   $(HERE)/src/qad.f \
   $(HERE)/src/amr2.f90 \
   $(HERE)/src/step2.f90 \
-  $(HERE)/src/flux2fw.f \
+  $(HERE)/src/flux2fw.f90 \
   $(HERE)/src/inlinelimiter.f \
   $(GEOLIB)/setprob.f90 \
   $(GEOLIB)/qinit.f90 \
