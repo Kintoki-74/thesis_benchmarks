@@ -32,7 +32,7 @@ c
       implicit double precision (a-h,o-z)
       dimension mthlim(mwaves)
       dimension wave(meqn, mwaves, 1-mbc:maxm+mbc)
-      dimension    s(1-mbc:maxm+mbc,mwaves)
+      dimension    s(mwaves,1-mbc:maxm+mbc)
 c
 c
       do 200 mw=1,mwaves
@@ -49,7 +49,7 @@ c
             if (i.eq.0) go to 190
             if (wnorm2.eq.0.d0) go to 190
 c
-            if (s(i,mw) .gt. 0.d0) then
+            if (s(mw,i) .gt. 0.d0) then
                 r = dotl / wnorm2
               else
                 r = dotr / wnorm2

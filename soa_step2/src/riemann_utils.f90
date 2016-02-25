@@ -1,9 +1,8 @@
 subroutine riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR, &
         bL,bR,uL,uR,vL,vR,phiL,phiR,s1,s2,drytol,g,& !sw,fw)
 sw1, sw2, sw3,fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33)
-
-
     !dir$ attributes forceinline :: riemann_fwave
+    !dir$ attributes vector: uniform(meqn,mwaves,drytol,g) :: riemann_fwave
  
     ! solve shallow water equations given single left and right states
     ! solution has two waves.

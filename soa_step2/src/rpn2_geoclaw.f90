@@ -44,7 +44,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     integer maxm,meqn,maux,mwaves,mbc,mx,ixy
 
     real(kind=DP) :: fwave(meqn, mwaves, 1-mbc:maxm+mbc)
-    real(kind=DP) :: s(1-mbc:maxm+mbc,mwaves)
+    real(kind=DP) :: s(mwaves,1-mbc:maxm+mbc)
     real(kind=DP) :: ql(1-mbc:maxm+mbc, meqn)
     real(kind=DP) :: qr(1-mbc:maxm+mbc, meqn)
     real(kind=DP) :: auxl(1-mbc:maxm+mbc,maux)
@@ -64,10 +64,8 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     real(kind=DP) :: bR,bL,sL,sR,sRoe1,sRoe2,sE1,sE2,uhat,chat
     real(kind=DP) :: s1m,s2m
     real(kind=DP) :: hstar,hstartest,hstarHLL,sLtest,sRtest
-    real(kind=DP) :: tw,dxdc
+    real(kind=DP) :: tw, dxdc
     real(kind=DP) :: sqghl, sqghr
-
-    real(kind=DP) :: tmp
 
     logical :: rare1,rare2
     ! Status variable for negative input
@@ -83,25 +81,46 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         nv=2
     endif
 
+    ! NONTEMPORAL STORES GIVE SPEEDUP!
+
     !Initialize Riemann problem for grid interface
-    s = 0.d0
-    fwave = 0.d0
-    !      do i=2-mbc,mx+mbc
-    !         do mw=1,mwaves
-    !             s(i,mw)=0.d0
-    !             fwave(1,mw,i)=0.d0
-    !             fwave(2,mw,i)=0.d0
-    !             fwave(3,mw,i)=0.d0
-    !         enddo
-    !      enddo
-    !zero (small) negative values if they exist
+    !DIR$ VECTOR ALIGNED NONTEMPORAL(s) 
+    !$OMP SIMD COLLAPSE(1)
     do i=2-mbc,mx+mbc
-    !         if (qr(i-1,1).lt.0.d0) then
-    !               qr(i-1,1)=0.d0
-    !               qr(i-1,2)=0.d0
-    !               qr(i-1,3)=0.d0
-    !               negative_input = .true.
-    !         endif
+        do mw=1,3
+            s(mw,i) = 0.d0
+        enddo
+    enddo
+
+    !DIR$ VECTOR ALIGNED NONTEMPORAL(fwave) 
+    !$OMP SIMD COLLAPSE(2)
+    do i=2-mbc,mx+mbc
+        do mw=1,3
+            do m=1,3
+                fwave(m,mw,i) = 0.d0
+            enddo
+        enddo
+    enddo
+    
+    !DIR$ VECTOR ALIGNED NONTEMPORAL(amdq) 
+    !$OMP SIMD COLLAPSE(1)
+    do i=1-mbc,mx+mbc
+        do m=1,3
+            amdq(m,i) = 0.d0
+        enddo
+    enddo
+
+    !DIR$ VECTOR ALIGNED NONTEMPORAL(apdq) 
+    !$OMP SIMD COLLAPSE(1)
+    do i=1-mbc,mx+mbc
+        do m=1,3
+            apdq(m,i) = 0.d0
+        enddo
+    enddo
+
+    !zero (small) negative values if they exist
+    !DIR$ VECTOR ALIGNED
+    do i=2-mbc,mx+mbc
         if (ql(i,1).lt.0.d0) then
             ql(i,1)=0.d0
             ql(i,2)=0.d0
@@ -111,24 +130,16 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     enddo
 
     !    !inform of a bad riemann problem from the start
-    !    if((qr(i-1,1).lt.0.d0).or.(ql(i,1) .lt. 0.d0)) then
-    !        write(*,*) 'Negative input: hl,hr,i=',qr(i-1,1),ql(i,1),i
-    !    endif
     if (negative_input) then
         write (*,*) 'Negative input for hl,hr!'
     endif
+
     !----------------------------------------------------------------------
     !loop through Riemann problems at each grid cell
-
-    !dir$ simd private(hL,hR,huL,huR,hvL,hvR,bL,bR,&
-    !dir$ fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3) 
+    !DIR$ VECTOR ALIGNED 
+    !$OMP SIMD PRIVATE(hL,hR,huL,huR,hvL,hvR,bL,bR,&
+    !$OMP fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3) 
     do i=2-mbc,mx+mbc
-        !skip problem if in a completely dry area
-!        if (qr(i-1,1) <= drytol .and. ql(i,1) <= drytol) then
-!            !   go to 30
-!            cycle
-!        endif
-
         if (qr(i-1,1) <= drytol .and. ql(i,1) <= drytol) then
             hL = drytol
             hR = drytol
@@ -148,12 +159,12 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         bL = auxr(i-1,1)
         bR = auxl(i,1)
 
-        !call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, fw, sw)
         call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
             fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
-        s(i,1) = sw1
-        s(i,2) = sw2
-        s(i,3) = sw3
+
+        s(1,i) = sw1
+        s(2,i) = sw2
+        s(3,i) = sw3
         ! mw=1
         fwave(1, 1,i) = fw11
         fwave(mu,1,i) = fw21
@@ -166,42 +177,48 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         fwave(1, 3,i) = fw13
         fwave(mu,3,i) = fw23
         fwave(nv,3,i) = fw33
-!        do mw=1,3!mwaves
-!            s(i,mw)=sw(mw)
-!            fwave(1,mw,i)=fw(1,mw)
-!            fwave(mu,mw,i)=fw(2,mw)
-!            fwave(nv,mw,i)=fw(3,mw)
-!        enddo
     enddo
     
     !==========Capacity for mapping from latitude longitude to physical space====
     if (mcapa.gt.0) then
-        do i=2-mbc,mx+mbc
-            if (ixy.eq.1) then
-                dxdc=(earth_radius*deg2rad)
-            else
-                dxdc=earth_radius*cos(auxl(i,3))*deg2rad
-            endif
-
-            do mw=1,mwaves
-                s(i,mw)=dxdc*s(i,mw)
-                fwave(1,mw,i)=dxdc*fwave(1,mw,i)
-                fwave(2,mw,i)=dxdc*fwave(2,mw,i)
-                fwave(3,mw,i)=dxdc*fwave(3,mw,i)
+        if (ixy == 1) then
+            dxdc = earth_radius*deg2rad
+            ! OMP SIMD GIVES SPEEDUP!!!
+            !DIR$ VECTOR ALIGNED
+            !$OMP SIMD COLLAPSE(1)
+            do i=2-mbc,mx+mbc
+                do mw=1,3
+                    s(mw,i) = dxdc * s(mw,i)
+                    fwave(1,mw,i) = dxdc*fwave(1,mw,i)
+                    fwave(2,mw,i) = dxdc*fwave(2,mw,i)
+                    fwave(3,mw,i) = dxdc*fwave(3,mw,i)
+                enddo
             enddo
-        enddo
+        else
+            !DIR$ VECTOR ALIGNED 
+            !$OMP SIMD PRIVATE(dxdc) COLLAPSE(1)
+            do i=2-mbc,mx+mbc
+                dxdc=earth_radius*cos(auxl(i,3))*deg2rad
+                do mw=1,3
+                    s(mw,i) = dxdc * s(mw,i)
+                    fwave(1,mw,i)=dxdc*fwave(1,mw,i)
+                    fwave(2,mw,i)=dxdc*fwave(2,mw,i)
+                    fwave(3,mw,i)=dxdc*fwave(3,mw,i)
+                enddo
+            enddo
+        endif
     endif
     !===============================================================================
 
 
     !============= compute fluctuations=============================================
-    amdq(1:3,:) = 0.d0
-    apdq(1:3,:) = 0.d0
+
+    !DIR$ VECTOR ALIGNED 
     do i=2-mbc,mx+mbc
-        do  mw=1,mwaves
-            if (s(i,mw) < 0.d0) then
+        do  mw=1,3
+            if (s(mw,i) < 0.d0) then
                 amdq(1:3,i) = amdq(1:3,i) + fwave(1:3,mw,i)
-            else if (s(i,mw) > 0.d0) then
+            else if (s(mw,i) > 0.d0) then
                 apdq(1:3,i)  = apdq(1:3,i) + fwave(1:3,mw,i)
             else
                 amdq(1:3,i) = amdq(1:3,i) + 0.5d0 * fwave(1:3,mw,i)
