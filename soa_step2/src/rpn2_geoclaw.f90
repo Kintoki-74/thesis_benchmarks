@@ -36,6 +36,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     use geoclaw_module, only: g => grav, drytol => dry_tolerance
     use geoclaw_module, only: earth_radius, deg2rad
     use amr_module, only: mcapa
+    use papi_module
 
     implicit none
     integer, parameter :: DP = kind(1.d0)
@@ -129,7 +130,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         endif
     enddo
 
-    !    !inform of a bad riemann problem from the start
+    ! Inform of a bad riemann problem from the start
     if (negative_input) then
         write (*,*) 'Negative input for hl,hr!'
     endif
@@ -137,28 +138,21 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     !----------------------------------------------------------------------
     !loop through Riemann problems at each grid cell
     !DIR$ VECTOR ALIGNED 
-    !$OMP SIMD PRIVATE(hL,hR,huL,huR,hvL,hvR,bL,bR,&
-    !$OMP fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3) 
+    !$OMP SIMD PRIVATE(hL,hR,huL,huR,hvL,hvR,bL,bR, &
+    !$OMP fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3)
     do i=2-mbc,mx+mbc
-        if (qr(i-1,1) <= drytol .and. ql(i,1) <= drytol) then
-            hL = drytol
-            hR = drytol
-            huL = 0.d0
-            huR = 0.d0
-            hvL = 0.d0
-            hvR = 0.d0
-        else
-            !Riemann problem variables
-            hL = qr(i-1,1) 
-            hR = ql(i,1) 
-            huL = qr(i-1,mu) 
-            huR = ql(i,mu) 
-            hvL=qr(i-1,nv) 
-            hvR=ql(i,nv)
-        endif
-        bL = auxr(i-1,1)
-        bR = auxl(i,1)
-
+        ! Riemann problem variables. These need to be locally copied as we don't
+        ! want to change the original values of the array (this is done when
+        ! adding the f-waves and speeds. Also, the accesses from the ith and i+1th
+        ! iteration overlap.
+        hL  = qr(i-1,1) 
+        hR  = ql(i,1) 
+        huL = qr(i-1,mu) 
+        huR = ql(i,mu) 
+        hvL = qr(i-1,nv) 
+        hvR = ql(i,nv)
+        bL  = auxr(i-1,1)
+        bR  = auxl(i,1)
         call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
             fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
 
@@ -178,7 +172,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         fwave(mu,3,i) = fw23
         fwave(nv,3,i) = fw33
     enddo
-    
+
     !==========Capacity for mapping from latitude longitude to physical space====
     if (mcapa.gt.0) then
         if (ixy == 1) then
