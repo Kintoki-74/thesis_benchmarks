@@ -1,6 +1,7 @@
 **/run_*
 **/_tmp*
 */_output*
+*/_plots
 *.o
 *.mod
 .*
