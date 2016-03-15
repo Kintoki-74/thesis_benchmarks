@@ -82,58 +82,21 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         nv=2
     endif
 
-    ! NONTEMPORAL STORES GIVE SPEEDUP!
-
-    !Initialize Riemann problem for grid interface
-    !DIR$ VECTOR ALIGNED NONTEMPORAL(s) 
-    !$OMP SIMD COLLAPSE(1)
-    do i=2-mbc,mx+mbc
-        do mw=1,3
-            s(mw,i) = 0.d0
-        enddo
-    enddo
-
-    !DIR$ VECTOR ALIGNED NONTEMPORAL(fwave) 
-    !$OMP SIMD COLLAPSE(2)
-    do i=2-mbc,mx+mbc
-        do mw=1,3
-            do m=1,3
-                fwave(m,mw,i) = 0.d0
-            enddo
-        enddo
-    enddo
-    
-    !DIR$ VECTOR ALIGNED NONTEMPORAL(amdq) 
-    !$OMP SIMD COLLAPSE(1)
-    do i=1-mbc,mx+mbc
-        do m=1,3
-            amdq(m,i) = 0.d0
-        enddo
-    enddo
-
-    !DIR$ VECTOR ALIGNED NONTEMPORAL(apdq) 
-    !$OMP SIMD COLLAPSE(1)
-    do i=1-mbc,mx+mbc
-        do m=1,3
-            apdq(m,i) = 0.d0
-        enddo
-    enddo
-
-    !zero (small) negative values if they exist
-    !DIR$ VECTOR ALIGNED
-    do i=2-mbc,mx+mbc
-        if (ql(i,1).lt.0.d0) then
-            ql(i,1)=0.d0
-            ql(i,2)=0.d0
-            ql(i,3)=0.d0
-            negative_input = .true.
-        endif
-    enddo
-
-    ! Inform of a bad riemann problem from the start
-    if (negative_input) then
-        write (*,*) 'Negative input for hl,hr!'
-    endif
+!    !zero (small) negative values if they exist
+!    !DIR$ VECTOR ALIGNED
+!    do i=2-mbc,mx+mbc
+!        if (ql(i,1).lt.0.d0) then
+!            ql(i,1)=0.d0
+!            ql(i,2)=0.d0
+!            ql(i,3)=0.d0
+!            negative_input = .true.
+!        endif
+!    enddo
+!
+!    ! Inform of a bad riemann problem from the start
+!    if (negative_input) then
+!        write (*,*) 'Negative input for hl,hr!'
+!    endif
 
     !----------------------------------------------------------------------
     !loop through Riemann problems at each grid cell
@@ -141,10 +104,10 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     !$OMP SIMD PRIVATE(hL,hR,huL,huR,hvL,hvR,bL,bR, &
     !$OMP fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3)
     do i=2-mbc,mx+mbc
-        ! Riemann problem variables. These need to be locally copied as we don't
-        ! want to change the original values of the array (this is done when
-        ! adding the f-waves and speeds. Also, the accesses from the ith and i+1th
-        ! iteration overlap.
+        ! Riemann problem variables. Since the cells of the i-1th and ith
+        ! Rimann problem overlap, the corresponding variables need to be copied
+        ! before changing them (this is done when
+        ! adding the f-waves and speeds.
         hL  = qr(i-1,1) 
         hR  = ql(i,1) 
         huL = qr(i-1,mu) 
@@ -174,7 +137,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     enddo
 
     !==========Capacity for mapping from latitude longitude to physical space====
-    if (mcapa.gt.0) then
+    if (mcapa > 0) then
         if (ixy == 1) then
             dxdc = earth_radius*deg2rad
             ! OMP SIMD GIVES SPEEDUP!!!
@@ -204,6 +167,21 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     endif
     !===============================================================================
 
+    !DIR$ VECTOR ALIGNED 
+    !$OMP SIMD COLLAPSE(1)
+    do i=1-mbc,mx+mbc
+        do m=1,3
+            amdq(m,i) = 0.d0
+        enddo
+    enddo
+
+    !DIR$ VECTOR ALIGNED 
+    !$OMP SIMD COLLAPSE(1)
+    do i=1-mbc,mx+mbc
+        do m=1,3
+            apdq(m,i) = 0.d0
+        enddo
+    enddo
 
     !============= compute fluctuations=============================================
 
