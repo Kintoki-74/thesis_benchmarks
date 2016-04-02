@@ -68,7 +68,7 @@ GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
 HERE = .
 
 MODULES = \
- $(HERE)/src/papi_module.f90 \
+ $(CLAWUTILS)/src/papi_module.f90 \
  $(GEOLIB)/utility_module.f90 \
  $(AMRLIB)/amr_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \

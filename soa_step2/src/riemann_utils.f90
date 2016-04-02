@@ -1,6 +1,9 @@
 subroutine riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR, &
-        bL,bR,uL,uR,vL,vR,phiL,phiR,s1,s2,drytol,g,sw,fw)
-    !$omp declare simd(riemann_fwave)
+        bL,bR,uL,uR,vL,vR,phiL,phiR,s1,s2,drytol,g,& !sw,fw)
+sw1, sw2, sw3,fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33)
+    !dir$ attributes forceinline :: riemann_fwave
+    !dir$ attributes vector: uniform(meqn,mwaves,drytol,g) :: riemann_fwave
+ 
     ! solve shallow water equations given single left and right states
     ! solution has two waves.
     ! flux - source is decomposed.
@@ -14,8 +17,10 @@ subroutine riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR, &
     real(kind=DP) :: hvL,hvR,vL,vR
     real(kind=DP) :: drytol,g
 
-    real(kind=DP) :: sw(mwaves)
-    real(kind=DP) :: fw(meqn,mwaves)
+    !real(kind=DP) :: sw(mwaves)
+    !real(kind=DP) :: fw(meqn,mwaves)
+    real(kind=8), intent(inout) :: sw1, sw2, sw3
+    real(kind=8), intent(inout) :: fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33
 
     !local
     real(kind=DP) :: delh,delhu,delphi,delb,delhdecomp,delphidecomp
@@ -31,25 +36,45 @@ subroutine riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR, &
     deldelphi = -g*0.5d0*(hR+hL)*delb
     delphidecomp = delphi - deldelphi
 
-    !flux decomposition
-    beta1 = (s2*delhu - delphidecomp)/(s2-s1)
-    beta2 = (delphidecomp - s1*delhu)/(s2-s1)
+    if (s2 /= s1) then
+        !flux decomposition
+        beta1 = (s2*delhu - delphidecomp)/(s2-s1)
+        beta2 = (delphidecomp - s1*delhu)/(s2-s1)
+    else
+        beta1 = 0.d0
+        beta2 = 0.d0
+    endif        
 
-    sw(1) = s1
-    sw(2) = 0.5d0*(s1+s2)
-    sw(3) = s2
+!    sw(1) = s1
+!    sw(2) = 0.5d0*(s1+s2)
+!    sw(3) = s2
+!    ! 1st nonlinear wave
+!    fw(1,1) = beta1
+!    fw(2,1) = beta1*s1
+!    fw(3,1) = beta1*vL
+!    ! 2nd nonlinear wave
+!    fw(1,3) = beta2
+!    fw(2,3) = beta2*s2
+!    fw(3,3) = beta2*vR
+!    ! advection of transverse wave
+!    fw(1,2) = 0.d0
+!    fw(2,2) = 0.d0
+!    fw(3,2) = hR*uR*vR - hL*uL*vL -fw(3,1)-fw(3,3)
+    sw1 = s1
+    sw2 = 0.5d0*(s1+s2)
+    sw3 = s2
     ! 1st nonlinear wave
-    fw(1,1) = beta1
-    fw(2,1) = beta1*s1
-    fw(3,1) = beta1*vL
+    fw11 = beta1
+    fw21 = beta1*s1
+    fw31 = beta1*vL
     ! 2nd nonlinear wave
-    fw(1,3) = beta2
-    fw(2,3) = beta2*s2
-    fw(3,3) = beta2*vR
+    fw13 = beta2
+    fw23 = beta2*s2
+    fw33 = beta2*vR
     ! advection of transverse wave
-    fw(1,2) = 0.d0
-    fw(2,2) = 0.d0
-    fw(3,2) = hR*uR*vR - hL*uL*vL -fw(3,1)-fw(3,3)
+    fw12 = 0.d0
+    fw22 = 0.d0
+    fw32 = hR*uR*vR - hL*uL*vL -fw31-fw33
     return
 end subroutine
 

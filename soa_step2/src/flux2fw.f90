@@ -83,6 +83,7 @@
       use amr_module, only: use_fwaves, mwaves, method
       use amr_module, only: mthlim
       use geoclaw_module, only: coordinate_system, earth_radius, deg2rad
+      use papi_module
 
       implicit double precision (a-h,o-z)
 
@@ -103,7 +104,7 @@
       dimension  aux2(1-mbc:maxm+mbc,maux)
       dimension  aux3(1-mbc:maxm+mbc,maux)
 !
-      dimension  s(1-mbc:maxm+mbc,mwaves)
+      dimension  s(mwaves,1-mbc:maxm+mbc)
       dimension  fwave(meqn, mwaves, 1-mbc:maxm+mbc)
       dimension  amdq(meqn, 1-mbc:maxm+mbc)
       dimension  apdq(meqn, 1-mbc:maxm+mbc)
@@ -143,8 +144,10 @@
 !     # solve Riemann problem at each interface and compute Godunov updates
 !     ---------------------------------------------------------------------
 !
+      call papi_start()
       call rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,q1d,q1d, &
                aux2,aux2,fwave,s,amdq,apdq)
+      call papi_stop(mx)
 
 !
 !   # Set fadd for the donor-cell upwind method (Godunov)
@@ -179,8 +182,8 @@
          do 50 i=1,mx+1
 !          # if s>0 use dtdx1d(i) to compute CFL,
 !          # if s<0 use dtdx1d(i-1) to compute CFL:
-            cfl1d = dmax1(cfl1d, dtdx1d(i)*s(i,mw), &
-                               -dtdx1d(i-1)*s(i,mw))
+            cfl1d = dmax1(cfl1d, dtdx1d(i)*s(mw,i), &
+                               -dtdx1d(i-1)*s(mw,i))
 
    50       continue
 !
@@ -204,8 +207,8 @@
             do 119 mw=1,mwaves
 !
 !              # second order corrections:
-               cqxx(m,i) = cqxx(m,i) + dsign(1.d0,s(i,mw)) &
-                 * (1.d0 - dabs(s(i,mw))*dtdx1d(i-1)) * fwave(m,mw,i)
+               cqxx(m,i) = cqxx(m,i) + dsign(1.d0,s(mw,i)) &
+                 * (1.d0 - dabs(s(mw,i))*dtdx1d(i-1)) * fwave(m,mw,i)
 !
   119          continue
             faddm(m,i) = faddm(m,i) + 0.5d0 * cqxx(m,i)

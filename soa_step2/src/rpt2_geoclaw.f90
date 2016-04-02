@@ -1,199 +1,206 @@
 ! =====================================================
-      subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx,&
-                     ql,qr,aux1,aux2,aux3,asdq,bmasdq,bpasdq)
-! =====================================================
-      use geoclaw_module, only: g => grav, tol => dry_tolerance
-      use geoclaw_module, only: coordinate_system,earth_radius,deg2rad
+subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
+        ql,qr,aux1,aux2,aux3,asdq,bmasdq,bpasdq)
+    ! =====================================================
+    use geoclaw_module, only: g => grav, tol => dry_tolerance
+    use geoclaw_module, only: coordinate_system,earth_radius,deg2rad
 
-      implicit none
-!
-!     # Riemann solver in the transverse direction using an einfeldt
-!     Jacobian.
+    implicit none
+    !
+    !     # Riemann solver in the transverse direction using an einfeldt
+    !     Jacobian.
 
-!-----------------------last modified 1/10/05----------------------
+    !-----------------------last modified 1/10/05----------------------
 
-      integer ixy,maxm,meqn,maux,mwaves,mbc,mx,imp
+    integer, parameter :: DP = kind(1.d0)
 
-      double precision  ql(1-mbc:maxm+mbc, meqn)
-      double precision  qr(1-mbc:maxm+mbc, meqn)
-      double precision  asdq(meqn,1-mbc:maxm+mbc)
-      double precision  bmasdq(meqn,1-mbc:maxm+mbc)
-      double precision  bpasdq(meqn,1-mbc:maxm+mbc)
-      double precision  aux1(1-mbc:maxm+mbc,maux)
-      double precision  aux2(1-mbc:maxm+mbc,maux)
-      double precision  aux3(1-mbc:maxm+mbc,maux)
+    real(kind=DP) :: ql(1-mbc:maxm+mbc, meqn)
+    real(kind=DP) :: qr(1-mbc:maxm+mbc, meqn)
+    real(kind=DP) :: asdq(meqn,1-mbc:maxm+mbc)
+    real(kind=DP) :: bmasdq(meqn,1-mbc:maxm+mbc)
+    real(kind=DP) :: bpasdq(meqn,1-mbc:maxm+mbc)
+    real(kind=DP) :: aux1(1-mbc:maxm+mbc,maux)
+    real(kind=DP) :: aux2(1-mbc:maxm+mbc,maux)
+    real(kind=DP) :: aux3(1-mbc:maxm+mbc,maux)
+    real(kind=DP) :: s(3)
+    real(kind=DP) :: r(3,3)
+    real(kind=DP) :: beta(3)
+    real(kind=DP) :: abs_tol
+    real(kind=DP) :: hl,hr,hul,hur,hvl,hvr,vl,vr,ul,ur,bl,br
+    real(kind=DP) :: uhat,vhat,hhat,roe1,roe3,s1,s2,s3,s1l,s3r
+    real(kind=DP) :: delf1,delf2,delf3,dxdcd,dxdcu
+    real(kind=DP) :: dxdcm,dxdcp,topo1,topo3,eta
+    real(kind=DP) :: sqhl, sqhr, sqhhat, sqrg
 
-      double precision  s(3)
-      double precision  r(3,3)
-      double precision  beta(3)
-      double precision  abs_tol
-      double precision  hl,hr,hul,hur,hvl,hvr,vl,vr,ul,ur,bl,br
-      double precision  uhat,vhat,hhat,roe1,roe3,s1,s2,s3,s1l,s3r
-      double precision  delf1,delf2,delf3,dxdcd,dxdcu
-      double precision  dxdcm,dxdcp,topo1,topo3,eta
+    integer :: ixy,maxm,meqn,maux,mwaves,mbc,mx,imp
+    integer :: i,m,mw,mu,mv
 
-      integer i,m,mw,mu,mv
+    sqrg = sqrt(g)
+    abs_tol=tol
 
-!      !!!SOA!!!
-!      do i=1-mbc,mx+mbc
-!          ql(i,:) = ql_aos(:,i)
-!          qr(i,:) = qr_aos(:,i)
-!      enddo
-      !!!SOA!!!
-
-      abs_tol=tol
-
-      if (ixy.eq.1) then
+    if (ixy.eq.1) then
         mu = 2
         mv = 3
-      else
+    else
         mu = 3
         mv = 2
-      endif
+    endif
 
-      do i=2-mbc,mx+mbc
+    do i=2-mbc,mx+mbc
+        hl=qr(i-1,1) 
+        hr=ql(i,1) 
+        hul=qr(i-1,mu) 
+        hur=ql(i,mu) 
+        hvl=qr(i-1,mv) 
+        hvr=ql(i,mv)
 
-         hl=qr(i-1,1) 
-         hr=ql(i,1) 
-         hul=qr(i-1,mu) 
-         hur=ql(i,mu) 
-         hvl=qr(i-1,mv) 
-         hvr=ql(i,mv)
+        !===========determine velocity from momentum===========================
+        if (hl<abs_tol) then
+            hl=0.d0
+            ul=0.d0
+            vl=0.d0
+        else
+            ul=hul/hl
+            vl=hvl/hl
+        endif
 
-!===========determine velocity from momentum===========================
-       if (hl.lt.abs_tol) then
-          hl=0.d0
-          ul=0.d0
-          vl=0.d0
-       else
-          ul=hul/hl
-          vl=hvl/hl
-       endif
+        if (hr<abs_tol) then
+            hr=0.d0
+            ur=0.d0
+            vr=0.d0
+        else
+            ur=hur/hr
+            vr=hvr/hr
+        endif
 
-       if (hr.lt.abs_tol) then
-          hr=0.d0
-          ur=0.d0
-          vr=0.d0
-       else
-          ur=hur/hr
-          vr=hvr/hr
-       endif
+        do mw=1,mwaves
+            s(mw)=0.d0
+            beta(mw)=0.d0
+            do m=1,meqn
+                r(m,mw)=0.d0
+            enddo
+        enddo
+        dxdcp = 1.d0
+        dxdcm = 1.d0
 
-       do mw=1,mwaves
-          s(mw)=0.d0
-          beta(mw)=0.d0
-          do m=1,meqn
-             r(m,mw)=0.d0
-          enddo
-       enddo
-      dxdcp = 1.d0
-      dxdcm = 1.d0
+        if (hl <= tol .and. hr <= tol) go to 90
 
-      if (hl <= tol .and. hr <= tol) go to 90
-
-!      !check and see if cell that transverse waves are going in is high and dry
-       if (imp.eq.1) then
+        ! check and see if cell that transverse waves are going in is high and dry
+        if (imp.eq.1) then
             eta = qr(i-1,1)  + aux2(i-1,1)
             topo1 = aux1(i-1,1)
             topo3 = aux3(i-1,1)
-!            s1 = vl-sqrt(g*hl)
-!            s3 = vl+sqrt(g*hl)
-!            s2 = 0.5d0*(s1+s3)
-       else
+        else
             eta = ql(i,1) + aux2(i,1)
             topo1 = aux1(i,1)
             topo3 = aux3(i,1)
-!            s1 = vr-sqrt(g*hr)
-!            s3 = vr+sqrt(g*hr)
-!            s2 = 0.5d0*(s1+s3)
-       endif
-       if (eta.lt.max(topo1,topo3)) go to 90
+        endif
 
-      if (coordinate_system.eq.2) then
-         if (ixy.eq.2) then
-             dxdcp=(earth_radius*deg2rad)
-            dxdcm = dxdcp
-         else
-            if (imp.eq.1) then
-               dxdcp = earth_radius*cos(aux3(i-1,3))*deg2rad
-               dxdcm = earth_radius*cos(aux1(i-1,3))*deg2rad
+        if (eta<max(topo1,topo3)) go to 90
+
+        if (coordinate_system.eq.2) then
+            if (ixy.eq.2) then
+                dxdcp=(earth_radius*deg2rad)
+                dxdcm = dxdcp
             else
-               dxdcp = earth_radius*cos(aux3(i,3))*deg2rad
-               dxdcm = earth_radius*cos(aux1(i,3))*deg2rad
+                if (imp.eq.1) then
+                    dxdcp = earth_radius*cos(aux3(i-1,3))*deg2rad
+                    dxdcm = earth_radius*cos(aux1(i-1,3))*deg2rad
+                else
+                    dxdcp = earth_radius*cos(aux3(i,3))*deg2rad
+                    dxdcm = earth_radius*cos(aux1(i,3))*deg2rad
+                endif
             endif
-         endif
-      endif
+        endif
 
-!=====Determine some speeds necessary for the Jacobian=================
-            vhat=(vr*dsqrt(hr))/(dsqrt(hr)+dsqrt(hl)) + &
-             (vl*dsqrt(hl))/(dsqrt(hr)+dsqrt(hl))
+        !=====Determine some speeds necessary for the Jacobian=================
+        sqhr = sqrt(hr)
+        sqhl = sqrt(hl)
+!---------------------------------------
+#if 1
+        vhat=(vr*sqhr)/(sqhr+sqhl) + (vl*sqhl)/(sqhr+sqhl)
+        uhat=(ur*sqhr)/(sqhr+sqhl) + (ul*sqhl)/(sqhr+sqhl)
+#else
+        ! CAUSES CHANGE
+        vhat=(vr*sqhr + vl*sqhl)/(sqhr+sqhl)
+        uhat=(ur*sqhr + ul*sqhl)/(sqhr+sqhl)
+#endif
+!---------------------------------------
+        hhat=(hr+hl)*0.5d0
+!---------------------------------------
+#if 1
+        roe1=vhat-sqrt(g*hhat)
+        roe3=vhat+sqrt(g*hhat)
+#else
+        ! CAUSES CHANGE
+        sqhhat = sqrg*sqrt((hr+hl)*0.5d0)
+        roe1=vhat-sqhhat
+        roe3=vhat+sqhhat
+#endif
+!---------------------------------------
+#if 1
+        s1l=vl-sqrt(g*hl)
+        s3r=vr+sqrt(g*hr)
+#else
+        ! CAUSES CHANGE
+        s1l=vl-sqrg*sqhl
+        s3r=vr+sqrg*sqhr
+#endif
 
-            uhat=(ur*dsqrt(hr))/(dsqrt(hr)+dsqrt(hl)) + &
-             (ul*dsqrt(hl))/(dsqrt(hr)+dsqrt(hl))
-            hhat=(hr+hl)/2.d0
+        s1=min(roe1,s1l)
+        s3=max(roe3,s3r)
+        s2=0.5d0*(s1+s3)
 
-            roe1=vhat-dsqrt(g*hhat)
-            roe3=vhat+dsqrt(g*hhat)
+        s(1)=s1
+        s(2)=s2
+        s(3)=s3
+        !=======================Determine asdq decomposition (beta)============
+        delf1=asdq(1,i)
+        delf2=asdq(mu,i)
+        delf3=asdq(mv, i)
 
-            s1l=vl-dsqrt(g*hl)
-            s3r=vr+dsqrt(g*hr)
+        beta(1) = (s3*delf1/(s3-s1))-(delf3/(s3-s1))
+        beta(2) = -s2*delf1 + delf2
+        beta(3) = (delf3/(s3-s1))-(s1*delf1/(s3-s1))
+        !======================End =================================================
 
-            s1=dmin1(roe1,s1l)
-            s3=dmax1(roe3,s3r)
+        !=====================Set-up eigenvectors===================================
+        r(1,1) = 1.d0
+        r(2,1) = s2
+        r(3,1) = s1
 
-            s2=0.5d0*(s1+s3)
+        r(1,2) = 0.d0
+        r(2,2) = 1.d0
+        r(3,2) = 0.d0
 
-           s(1)=s1
-           s(2)=s2
-           s(3)=s3
-!=======================Determine asdq decomposition (beta)============
-         delf1=asdq(1,i)
-         delf2=asdq(mu,i)
-         delf3=asdq(mv, i)
+        r(1,3) = 1.d0
+        r(2,3) = s2
+        r(3,3) = s3
+        !============================================================================
+        90      continue
+        !============= compute fluctuations==========================================
 
-         beta(1) = (s3*delf1/(s3-s1))-(delf3/(s3-s1))
-         beta(2) = -s2*delf1 + delf2
-         beta(3) = (delf3/(s3-s1))-(s1*delf1/(s3-s1))
-!======================End =================================================
+!        bmasdq(1,i)=0.0d0
+!        bmasdq(2,i)=0.0d0
+!        bmasdq(3,i)=0.0d0
+!        bpasdq(1,i)=0.0d0
+!        bpasdq(2,i)=0.0d0
+!        bpasdq(3,i)=0.0d0
 
-!=====================Set-up eigenvectors===================================
-         r(1,1) = 1.d0
-         r(2,1) = s2
-         r(3,1) = s1
-
-         r(1,2) = 0.d0
-         r(2,2) = 1.d0
-         r(3,2) = 0.d0
-
-         r(1,3) = 1.d0
-         r(2,3) = s2
-         r(3,3) = s3
-!============================================================================
-90      continue
-!============= compute fluctuations==========================================
-
-               bmasdq(1,i)=0.0d0
-               bpasdq(1,i)=0.0d0
-               bmasdq(2,i)=0.0d0
-               bpasdq(2,i)=0.0d0
-               bmasdq(3,i)=0.0d0
-               bpasdq(3,i)=0.0d0
-            do  mw=1,3
-               if (s(mw).lt.0.d0) then
-                 bmasdq(1,i) =bmasdq(1,i) + dxdcm*s(mw)*beta(mw)*r(1,mw)
-                 bmasdq(mu,i)=bmasdq(mu,i)+ dxdcm*s(mw)*beta(mw)*r(2,mw)
-                 bmasdq(mv,i)=bmasdq(mv,i)+ dxdcm*s(mw)*beta(mw)*r(3,mw)
-               elseif (s(mw).gt.0.d0) then
-                 bpasdq(1,i) =bpasdq(1,i) + dxdcp*s(mw)*beta(mw)*r(1,mw)
-                 bpasdq(mu,i)=bpasdq(mu,i)+ dxdcp*s(mw)*beta(mw)*r(2,mw)
-                 bpasdq(mv,i)=bpasdq(mv,i)+ dxdcp*s(mw)*beta(mw)*r(3,mw)
-               endif
-            enddo
-!========================================================================
-         enddo
-!
-
-!
-
-      return
-      end
+        bmasdq(:,i)=0.0d0
+        bpasdq(:,i)=0.0d0
+        do mw=1,3
+            if (s(mw)<0.d0) then
+                bmasdq(1,i) =bmasdq(1,i) + dxdcm*s(mw)*beta(mw)*r(1,mw)
+                bmasdq(mu,i)=bmasdq(mu,i)+ dxdcm*s(mw)*beta(mw)*r(2,mw)
+                bmasdq(mv,i)=bmasdq(mv,i)+ dxdcm*s(mw)*beta(mw)*r(3,mw)
+            elseif (s(mw)>0.d0) then
+                bpasdq(1,i) =bpasdq(1,i) + dxdcp*s(mw)*beta(mw)*r(1,mw)
+                bpasdq(mu,i)=bpasdq(mu,i)+ dxdcp*s(mw)*beta(mw)*r(2,mw)
+                bpasdq(mv,i)=bpasdq(mv,i)+ dxdcp*s(mw)*beta(mw)*r(3,mw)
+            endif
+        enddo
+        !========================================================================
+    enddo
+    return
+end subroutine 

@@ -36,6 +36,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     use geoclaw_module, only: g => grav, drytol => dry_tolerance
     use geoclaw_module, only: earth_radius, deg2rad
     use amr_module, only: mcapa
+    use papi_module
 
     implicit none
     integer, parameter :: DP = kind(1.d0)
@@ -44,7 +45,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     integer maxm,meqn,maux,mwaves,mbc,mx,ixy
 
     real(kind=DP) :: fwave(meqn, mwaves, 1-mbc:maxm+mbc)
-    real(kind=DP) :: s(1-mbc:maxm+mbc,mwaves)
+    real(kind=DP) :: s(mwaves,1-mbc:maxm+mbc)
     real(kind=DP) :: ql(1-mbc:maxm+mbc, meqn)
     real(kind=DP) :: qr(1-mbc:maxm+mbc, meqn)
     real(kind=DP) :: auxl(1-mbc:maxm+mbc,maux)
@@ -55,17 +56,17 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     !local only
     integer m,i,mw,maxiter,mu,nv
     real(kind=DP) :: wall(3)
-    real(kind=DP), dimension(3,3) :: fw
-    real(kind=DP) :: sw(3)
+    !real(kind=DP), dimension(3,3) :: fw
+    !real(kind=DP) :: sw(3)
+    real(kind=DP) :: sw1, sw2, sw3
+    real(kind=DP) :: fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33
 
     real(kind=DP) :: hR,hL,huR,huL,uR,uL,hvR,hvL,vR,vL,phiR,phiL
     real(kind=DP) :: bR,bL,sL,sR,sRoe1,sRoe2,sE1,sE2,uhat,chat
     real(kind=DP) :: s1m,s2m
     real(kind=DP) :: hstar,hstartest,hstarHLL,sLtest,sRtest
-    real(kind=DP) :: tw,dxdc
+    real(kind=DP) :: tw, dxdc
     real(kind=DP) :: sqghl, sqghr
-
-    real(kind=DP) :: tmp
 
     logical :: rare1,rare2
     ! Status variable for negative input
@@ -81,196 +82,115 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         nv=2
     endif
 
-    !Initialize Riemann problem for grid interface
-    s = 0.d0
-    fwave = 0.d0
-    !      do i=2-mbc,mx+mbc
-    !         do mw=1,mwaves
-    !             s(i,mw)=0.d0
-    !             fwave(1,mw,i)=0.d0
-    !             fwave(2,mw,i)=0.d0
-    !             fwave(3,mw,i)=0.d0
-    !         enddo
-    !      enddo
-    !zero (small) negative values if they exist
-    do i=2-mbc,mx+mbc
-    !         if (qr(i-1,1).lt.0.d0) then
-    !               qr(i-1,1)=0.d0
-    !               qr(i-1,2)=0.d0
-    !               qr(i-1,3)=0.d0
-    !               negative_input = .true.
-    !         endif
-        if (ql(i,1).lt.0.d0) then
-            ql(i,1)=0.d0
-            ql(i,2)=0.d0
-            ql(i,3)=0.d0
-            negative_input = .true.
-        endif
-    enddo
+!    !zero (small) negative values if they exist
+!    !DIR$ VECTOR ALIGNED
+!    do i=2-mbc,mx+mbc
+!        if (ql(i,1).lt.0.d0) then
+!            ql(i,1)=0.d0
+!            ql(i,2)=0.d0
+!            ql(i,3)=0.d0
+!            negative_input = .true.
+!        endif
+!    enddo
+!
+!    ! Inform of a bad riemann problem from the start
+!    if (negative_input) then
+!        write (*,*) 'Negative input for hl,hr!'
+!    endif
 
-    !    !inform of a bad riemann problem from the start
-    !    if((qr(i-1,1).lt.0.d0).or.(ql(i,1) .lt. 0.d0)) then
-    !        write(*,*) 'Negative input: hl,hr,i=',qr(i-1,1),ql(i,1),i
-    !    endif
-    if (negative_input) then
-        write (*,*) 'Negative input for hl,hr!'
-    endif
     !----------------------------------------------------------------------
     !loop through Riemann problems at each grid cell
+    !DIR$ VECTOR ALIGNED 
+    !$OMP SIMD PRIVATE(hL,hR,huL,huR,hvL,hvR,bL,bR, &
+    !$OMP fw11,fw12,fw13,fw21,fw22,fw23,fw31,fw32,fw33,sw1,sw2,sw3)
     do i=2-mbc,mx+mbc
-        !skip problem if in a completely dry area
-        if (qr(i-1,1) <= drytol .and. ql(i,1) <= drytol) then
-            !   go to 30
-            cycle
-        endif
-
-        !Riemann problem variables
-        hL = qr(i-1,1) 
-        hR = ql(i,1) 
+        ! Riemann problem variables. Since the cells of the i-1th and ith
+        ! Rimann problem overlap, the corresponding variables need to be copied
+        ! before changing them (this is done when
+        ! adding the f-waves and speeds.
+        hL  = qr(i-1,1) 
+        hR  = ql(i,1) 
         huL = qr(i-1,mu) 
         huR = ql(i,mu) 
-        bL = auxr(i-1,1)
-        bR = auxl(i,1)
+        hvL = qr(i-1,nv) 
+        hvR = ql(i,nv)
+        bL  = auxr(i-1,1)
+        bR  = auxl(i,1)
+        call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
+            fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
 
-        hvL=qr(i-1,nv) 
-        hvR=ql(i,nv)
-
-        !check for wet/dry boundary
-        if (hR.gt.drytol) then
-            uR=huR/hR
-            vR=hvR/hR
-            phiR = 0.5d0*g*hR**2 + huR**2/hR
-        else
-            hR = 0.d0
-            huR = 0.d0
-            hvR = 0.d0
-            uR = 0.d0
-            vR = 0.d0
-            phiR = 0.d0
-        endif
-
-        if (hL.gt.drytol) then
-            uL=huL/hL
-            vL=hvL/hL
-            phiL = 0.5d0*g*hL**2 + huL**2/hL
-        else
-            hL=0.d0
-            huL=0.d0
-            hvL=0.d0
-            uL=0.d0
-            vL=0.d0
-            phiL = 0.d0
-        endif
-
-        wall(1) = 1.d0
-        wall(2) = 1.d0
-        wall(3) = 1.d0
-        if (hR.le.drytol) then
-            call riemanntype(hL,hL,uL,-uL,hstar,s1m,s2m,&
-                rare1,rare2,1,drytol,g)
-            hstartest=max(hL,hstar)
-            if (hstartest+bL.lt.bR) then !right state should become ghost values that mirror left for wall problem
-                !                bR=hstartest+bL
-                wall(2)=0.d0
-                wall(3)=0.d0
-                hR=hL
-                huR=-huL
-                bR=bL
-                phiR=phiL
-                uR=-uL
-                vR=vL
-            elseif (hL+bL.lt.bR) then
-                bR=hL+bL
-            endif
-        elseif (hL.le.drytol) then ! right surface is lower than left topo
-            call riemanntype(hR,hR,-uR,uR,hstar,s1m,s2m,&
-                rare1,rare2,1,drytol,g)
-            hstartest=max(hR,hstar)
-            if (hstartest+bR.lt.bL) then  !left state should become ghost values that mirror right
-                !               bL=hstartest+bR
-                wall(1)=0.d0
-                wall(2)=0.d0
-                hL=hR
-                huL=-huR
-                bL=bR
-                phiL=phiR
-                uL=-uR
-                vL=vR
-            elseif (hR+bR.lt.bL) then
-                bL=hR+bR
-            endif
-        endif
-
-        sqghl = sqrt(g*hL)
-        sqghr = sqrt(g*hR)
-        !determine wave speeds
-        sL=uL-sqghl ! 1 wave speed of left state
-        sR=uR+sqghr ! 2 wave speed of right state
-
-        uhat=(sqghl*uL + sqghr*uR)/(sqghr+sqghl) ! Roe average
-        chat=sqrt(g*0.5d0*(hR+hL)) ! Roe average
-        sRoe1=uhat-chat ! Roe wave speed 1 wave
-        sRoe2=uhat+chat ! Roe wave speed 2 wave
-
-        sE1 = min(sL,sRoe1) ! Eindfeldt speed 1 wave
-        sE2 = max(sR,sRoe2) ! Eindfeldt speed 2 wave
-
-        !--------------------end initializing...finally----------
-        !solve Riemann problem.
-
-        maxiter = 1
-
-        call riemann_fwave(meqn,mwaves,hL,hR,huL,huR,hvL,hvR,&
-                bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2,drytol,g,sw,fw)
-
-        !        !eliminate ghost fluxes for wall
-        !dir$ simd
-        do mw=1,3
-            tmp = wall(mw)
-            fw(1,mw)=fw(1,mw)*tmp 
-            fw(2,mw)=fw(2,mw)*tmp
-            fw(3,mw)=fw(3,mw)*tmp
-        enddo
-        do mw=1,3
-            sw(mw)=sw(mw)*wall(mw)
-        enddo
-
-        do mw=1,mwaves
-            s(i,mw)=sw(mw)
-            fwave(1,mw,i)=fw(1,mw)
-            fwave(mu,mw,i)=fw(2,mw)
-            fwave(nv,mw,i)=fw(3,mw)
-        enddo
+        s(1,i) = sw1
+        s(2,i) = sw2
+        s(3,i) = sw3
+        ! mw=1
+        fwave(1, 1,i) = fw11
+        fwave(mu,1,i) = fw21
+        fwave(nv,1,i) = fw31
+        ! mw=2
+        fwave(1, 2,i) = fw12
+        fwave(mu,2,i) = fw22
+        fwave(nv,2,i) = fw32
+        ! mw=3
+        fwave(1, 3,i) = fw13
+        fwave(mu,3,i) = fw23
+        fwave(nv,3,i) = fw33
     enddo
 
     !==========Capacity for mapping from latitude longitude to physical space====
-    if (mcapa.gt.0) then
-        do i=2-mbc,mx+mbc
-            if (ixy.eq.1) then
-                dxdc=(earth_radius*deg2rad)
-            else
-                dxdc=earth_radius*cos(auxl(i,3))*deg2rad
-            endif
-
-            do mw=1,mwaves
-                s(i,mw)=dxdc*s(i,mw)
-                fwave(1,mw,i)=dxdc*fwave(1,mw,i)
-                fwave(2,mw,i)=dxdc*fwave(2,mw,i)
-                fwave(3,mw,i)=dxdc*fwave(3,mw,i)
+    if (mcapa > 0) then
+        if (ixy == 1) then
+            dxdc = earth_radius*deg2rad
+            ! OMP SIMD GIVES SPEEDUP!!!
+            !DIR$ VECTOR ALIGNED
+            !$OMP SIMD COLLAPSE(1)
+            do i=2-mbc,mx+mbc
+                do mw=1,3
+                    s(mw,i) = dxdc * s(mw,i)
+                    fwave(1,mw,i) = dxdc*fwave(1,mw,i)
+                    fwave(2,mw,i) = dxdc*fwave(2,mw,i)
+                    fwave(3,mw,i) = dxdc*fwave(3,mw,i)
+                enddo
             enddo
-        enddo
+        else
+            !DIR$ VECTOR ALIGNED 
+            !$OMP SIMD PRIVATE(dxdc) COLLAPSE(1)
+            do i=2-mbc,mx+mbc
+                dxdc=earth_radius*cos(auxl(i,3))*deg2rad
+                do mw=1,3
+                    s(mw,i) = dxdc * s(mw,i)
+                    fwave(1,mw,i)=dxdc*fwave(1,mw,i)
+                    fwave(2,mw,i)=dxdc*fwave(2,mw,i)
+                    fwave(3,mw,i)=dxdc*fwave(3,mw,i)
+                enddo
+            enddo
+        endif
     endif
     !===============================================================================
 
+    !DIR$ VECTOR ALIGNED 
+    !$OMP SIMD COLLAPSE(1)
+    do i=1-mbc,mx+mbc
+        do m=1,3
+            amdq(m,i) = 0.d0
+        enddo
+    enddo
+
+    !DIR$ VECTOR ALIGNED 
+    !$OMP SIMD COLLAPSE(1)
+    do i=1-mbc,mx+mbc
+        do m=1,3
+            apdq(m,i) = 0.d0
+        enddo
+    enddo
 
     !============= compute fluctuations=============================================
-    amdq(1:3,:) = 0.d0
-    apdq(1:3,:) = 0.d0
+
+    !DIR$ VECTOR ALIGNED 
     do i=2-mbc,mx+mbc
-        do  mw=1,mwaves
-            if (s(i,mw) < 0.d0) then
+        do  mw=1,3
+            if (s(mw,i) < 0.d0) then
                 amdq(1:3,i) = amdq(1:3,i) + fwave(1:3,mw,i)
-            else if (s(i,mw) > 0.d0) then
+            else if (s(mw,i) > 0.d0) then
                 apdq(1:3,i)  = apdq(1:3,i) + fwave(1:3,mw,i)
             else
                 amdq(1:3,i) = amdq(1:3,i) + 0.5d0 * fwave(1:3,mw,i)

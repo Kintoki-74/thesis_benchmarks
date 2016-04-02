@@ -51,24 +51,24 @@ contains
     end subroutine
 
     subroutine papi_start()
+    !dir$ attributes forceinline :: papi_start
         calls = calls + 1
+        call PAPIF_start(eventset, ret)
         ! ======= TIMING =======
         !call PAPIF_get_virt_usec(clock_start)
         call PAPIF_get_real_nsec(clock_start)
         ! ======= TIMING =======
-        
-        call PAPIF_start(eventset, ret)
     end subroutine
 
     subroutine papi_stop(riemann_solves)
+    !dir$ attributes forceinline :: papi_stop
         integer, intent(in), optional :: riemann_solves
-
-        call PAPIF_stop(eventset, values, ret)
-        
         ! ======= TIMING =======
         !call PAPIF_get_virt_usec(clock_end)
         call PAPIF_get_real_nsec(clock_end)
         ! ======= TIMING =======
+        call PAPIF_stop(eventset, values, ret)
+        
         ! Count number of zero times (=> insufficient timer resultion)
         if (clock_end - clock_start .eq. 0) zerotimes = zerotimes + 1
         
@@ -93,8 +93,8 @@ contains
             avg_rims = (avg_rims*(calls-1) &
                 + real(riemann_solves,kind=DP)/total_time) &
                 / real(calls, kind=DP)
-            maxflpops = max(maxflpops, flpops)
-            minflpops = min(minflpops, flpops)
+            maxflpops = max(maxflpops, flpops/riemann_solves)
+            minflpops = min(minflpops, flpops/riemann_solves)
             minrs = min(minrs, riemann_solves)
             maxrs = max(maxrs, riemann_solves)
         endif
@@ -115,7 +115,7 @@ contains
         if (riemannstats) then
             write(*,*)          "======= RPN2 STATS ========"
             write(*,'(a,f14.3)')"=> RIEMANN SOLVES/SECOND (AVG):", avg_rims
-            write(*,'(a,2i8)')  "=> MIN/MAX FP OPS PER CALL:", &
+            write(*,'(a,2i8)')  "=> MIN/MAX FP OPS PER RIEMANN SOLVE (AVG):", &
                 minflpops, maxflpops 
             write(*,'(a,2i8)')  "=> MIN/MAX RIEMANN SOLVES PER CALL:", minrs, maxrs
         endif
