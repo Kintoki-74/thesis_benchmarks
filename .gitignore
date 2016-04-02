@@ -7,6 +7,7 @@
 .*
 *.optrpt
 *.data
+results
 pyclaw.log
 xgeoclaw
 VECREPORT*
