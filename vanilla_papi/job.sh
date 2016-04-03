@@ -6,7 +6,7 @@
 #SBATCH -n 1                # 1 task
 #SBATCH -p development      # queue (partition) -- serial, normal, development, etc.
 #SBATCH -t 00:05:00         # run time (hh:mm:ss)
-#SBATCH --mail-user=am4491@columbia.edu
+#SBATCH --mail-user=andreemalcher@gmail.com
 #SBATCH --mail-type=begin   # email me when the job starts
 #SBATCH --mail-type=end     # email me when the job finishes
 
