@@ -23,8 +23,8 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O2 -ipo -align array32byte # -qopenmp-simd -xavx 
-LFLAGS ?= -qopenmp-stubs -lpapi
+FFLAGS ?= -O2 -ipo -pg#-align array32byte -qopenmp-simd -xavx 
+LFLAGS ?= -qopenmp-stubs -pg
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)
 # ---------------------------------
@@ -35,8 +35,8 @@ AMRLIB = $(CLAW)/amrclaw/src/2d
 GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
 HERE = .
 
+ #$(CLAWUTILS)/src/papi_module.f90
 MODULES = \
- $(CLAWUTILS)/src/papi_module.f90 \
  $(HERE)/src/amr_module.f90 \
  $(GEOLIB)/utility_module.f90 \
  $(AMRLIB)/regions_module.f90 \

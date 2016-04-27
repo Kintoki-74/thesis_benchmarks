@@ -1,6 +1,6 @@
 subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, & !fw, sw)
     fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
-    !dir$ attributes vector: uniform(drytol) :: solve_single_layer_rp
+    !$OMP DECLARE SIMD(solve_single_layer_rp) UNIFORM(drytol)
     use geoclaw_module, only: g => grav
     implicit none
 

@@ -4,11 +4,10 @@
 #SBATCH -e CHILE_SOA_ERR_%j # error file name (%j expands to jobID)
 #SBATCH -N 1                # total number of nodes requested (16 cores/node)
 #SBATCH -n 1                # 1 task
-#SBATCH -p development      # queue (partition) -- normal, development, etc.
-#SBATCH -t 00:05:00         # run time (hh:mm:ss)
+#SBATCH -p normal           # queue (partition) -- normal, development, etc.
+#SBATCH -t 05:00:00         # run time (hh:mm:ss)
 #SBATCH --mail-user=andreemalcher@gmail.com
-#SBATCH --mail-type=begin   # email me when the job starts
-#SBATCH --mail-type=end     # email me when the job finishes
+#SBATCH --mail-type=fail    # email me when the job fails
 
 make topo
 make data

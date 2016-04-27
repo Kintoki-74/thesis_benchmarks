@@ -36,7 +36,9 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     use geoclaw_module, only: g => grav, drytol => dry_tolerance
     use geoclaw_module, only: earth_radius, deg2rad
     use amr_module, only: mcapa
+#ifdef USEPAPI
     use papi_module
+#endif
 
     implicit none
     integer, parameter :: DP = kind(1.d0)
@@ -71,6 +73,18 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
     logical :: rare1,rare2
     ! Status variable for negative input
     logical :: negative_input = .false.
+
+    interface
+        subroutine solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
+            fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
+        !!! - dir$ attributes vector: uniform(drytol) :: solve_single_layer_rp
+        !$OMP DECLARE SIMD(solve_single_layer_rp) UNIFORM(drytol)
+            real(kind=8), intent(in) :: drytol
+            real(kind=8), intent(inout) :: sw1, sw2, sw3
+            real(kind=8), intent(inout) :: fw11, fw12, fw13, fw21, fw22, fw23,fw31, fw32, fw33
+            real(kind=8), intent(inout) :: hL, hR, huL, huR, hvL, hvR, bL, bR
+        end subroutine
+    end interface
 
     !-----------------------Initializing-----------------------------------
     !set normal direction
@@ -116,6 +130,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         hvR = ql(i,nv)
         bL  = auxr(i-1,1)
         bR  = auxl(i,1)
+        !dir forceinline 
         call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
             fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
 
