@@ -130,6 +130,7 @@ subroutine rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,&
         hvR = ql(i,nv)
         bL  = auxr(i-1,1)
         bR  = auxl(i,1)
+
         !dir$ forceinline 
         call solve_single_layer_rp(drytol, hL, hR, huL, huR, hvL, hvR, bL, bR, &
             fw11, fw12, fw13, fw21, fw22, fw23, fw31, fw32, fw33, sw1, sw2, sw3)
