@@ -83,7 +83,9 @@
       use amr_module, only: use_fwaves, mwaves, method
       use amr_module, only: mthlim
       use geoclaw_module, only: coordinate_system, earth_radius, deg2rad
+#ifdef USEPAPI
       use papi_module
+#endif
 
       implicit double precision (a-h,o-z)
 
@@ -144,10 +146,14 @@
 !     # solve Riemann problem at each interface and compute Godunov updates
 !     ---------------------------------------------------------------------
 !
+#ifdef USEPAPI
       call papi_start()
+#endif
       call rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,q1d,q1d, &
                aux2,aux2,fwave,s,amdq,apdq)
+#ifdef USEPAPI
       call papi_stop(mx)
+#endif
 
 !
 !   # Set fadd for the donor-cell upwind method (Godunov)
@@ -235,9 +241,11 @@
 !
 !
 !     # split the left-going flux difference into down-going and up-going:
+      !call papi_start()
       call rpt2(ixy,1,maxm,meqn,mwaves,maux,mbc,mx, &
                q1d,q1d,aux1,aux2,aux3, &
                amdq,bmasdq,bpasdq)
+      !call papi_stop(mx)
 !
 !     # modify flux below and above by B^- A^- Delta q and  B^+ A^- Delta q:
       do 160 i = 1, mx+1
@@ -252,9 +260,11 @@
   160          continue
 !
 !     # split the right-going flux difference into down-going and up-going:
+      !call papi_start()
       call rpt2(ixy,2,maxm,meqn,mwaves,maux,mbc,mx, &
                q1d,q1d,aux1,aux2,aux3, &
                apdq,bmasdq,bpasdq)
+      !call papi_stop(mx)
 !
 !     # modify flux below and above by B^- A^+ Delta q and  B^+ A^+ Delta q:
       do 180 i = 1, mx+1

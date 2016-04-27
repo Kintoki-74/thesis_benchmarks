@@ -39,19 +39,13 @@ def topo(x,y):
     # value of z at origin:  Try zmin = 80 for shoreline or 250 for no shore
     
     z = x*0.-10.
-    #z = x*0.+where(sqrt((x-2.)*(x-2.) + (y-2.)*(y-2.)) < 20., -10., -13.)
     return z
 
 
 def qinit(x,y):
-    """
-    Gaussian hump:
-    """
     from numpy import where
-    ze = -((x+0e0)**2 + (y+0e0)**2)/2.0
-    #z = where(ze>-40., 10., 0.)
-    #z = x*0.+0.
-    z = x*0.+where(sqrt((x-2.)*(x-2.) + (y-2.)*(y-2.)) < 20., 1., 0.)
+    z = x*0.-10.
+    #z = x*0.+where(sqrt(x*x + y*y) < 20., 3., 0.)
     return z
 
 if __name__=='__main__':

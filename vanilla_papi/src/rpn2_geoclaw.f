@@ -36,8 +36,9 @@ c
       use geoclaw_module, only: g => grav, drytol => dry_tolerance
       use geoclaw_module, only: earth_radius, deg2rad
       use amr_module, only: mcapa
+#ifdef USEPAPI
       use papi_module
-
+#endif
       implicit none
 
       !input
@@ -65,7 +66,6 @@ c
       double precision tw,dxdc
 
       logical rare1,rare2
-      !call papi_start()
       
       !loop through Riemann problems at each grid cell
       do i=2-mbc,mx+mbc
@@ -234,7 +234,6 @@ c        !eliminate ghost fluxes for wall
 
  30      continue
       enddo
-
 
 c==========Capacity for mapping from latitude longitude to physical space====
         if (mcapa.gt.0) then

@@ -26,7 +26,7 @@ RESTART = False
 FFLAGS ?= -qopenmp-simd -fp-model=precise -O2 -ipo -align array32byte -xavx -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2,solve_single_layer_rp,riemann_fwave -qopt-report-file=VECREPORT.optrpt
 
 #-qopenmp-stubs -qopenmp-simd 
-LFLAGS ?= -lpapi -qopenmp-simd -qopenmp-stubs
+LFLAGS ?= -pg -qopenmp-simd -qopenmp-stubs
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)
 # ---------------------------------
@@ -37,8 +37,8 @@ AMRLIB = $(CLAW)/amrclaw/src/2d
 GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
 HERE = .
 
+# $(CLAWUTILS)/src/papi_module.f90 
 MODULES = \
- $(CLAWUTILS)/src/papi_module.f90 \
  $(HERE)/src/amr_module.f90 \
  $(GEOLIB)/utility_module.f90 \
  $(AMRLIB)/regions_module.f90 \

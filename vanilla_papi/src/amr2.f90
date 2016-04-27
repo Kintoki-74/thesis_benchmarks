@@ -94,7 +94,9 @@ program amr2
     use regions_module, only: set_regions
     use gauges_module, only: set_gauges, num_gauges
     use fgmax_module, only: set_fgmax, FG_num_fgrids
+#ifdef USEPAPI
     use papi_module
+#endif
 
     implicit none
 
@@ -124,8 +126,10 @@ program amr2
     character(len=*), parameter :: matfile = 'fort.nplot'
     character(len=*), parameter :: parmfile = 'fort.parameters'
 
+#ifdef USEPAPI
     ! Initialize PAPI
     call papi_init()
+#endif
 
     ! Open parameter and debug files
     open(dbugunit,file=dbugfile,status='unknown',form='formatted')
@@ -829,6 +833,8 @@ program amr2
     ! Close output and debug files.
     close(outunit)
     close(dbugunit)
-    call papi_summary()
+#ifdef USEPAPI
+    call papi_summary("RPN2")
+#endif
 
 end program amr2

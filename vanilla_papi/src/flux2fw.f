@@ -83,8 +83,9 @@ c---------------------last modified 1/04/05-----------------------------
       use amr_module, only: use_fwaves, mwaves, method
       use amr_module, only: mthlim
       use geoclaw_module, only: coordinate_system, earth_radius, deg2rad
+#ifdef USEPAPI
       use papi_module
-
+#endif
       implicit double precision (a-h,o-z)
 
       external rpn2, rpt2
@@ -136,10 +137,14 @@ c
 c     # solve Riemann problem at each interface and compute Godunov updates
 c     ---------------------------------------------------------------------
 c
+#ifdef USEPAPI
       call papi_start()
+#endif
       call rpn2(ixy,maxm,meqn,mwaves,maux,mbc,mx,q1d,q1d,
      &          aux2,aux2,fwave,s,amdq,apdq)
+#ifdef USEPAPI
       call papi_stop(mx) 
+#endif
 
 c
 c   # Set fadd for the donor-cell upwind method (Godunov)
