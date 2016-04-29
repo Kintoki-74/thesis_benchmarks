@@ -23,7 +23,7 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O2 -ipo -fp-model=precise -align array32byte -xavx
+FFLAGS ?= -O2 -ipo -DUSEPAPI#-align array32byte -xavx 
 LFLAGS ?= -lpapi
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)
@@ -36,8 +36,8 @@ GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
 HERE = .
 
 MODULES = \
- $(CLAWUTILS)/src/papi_module.f90 \
  $(HERE)/src/amr_module.f90 \
+ $(CLAWUTILS)/src/papi_module.f90 \
  $(GEOLIB)/utility_module.f90 \
  $(AMRLIB)/regions_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \
@@ -53,9 +53,11 @@ MODULES = \
  $(GEOLIB)/surge/storm_module.f90 \
  $(GEOLIB)/friction_module.f90
 
+#  $(CLAW)/riemann/src/geoclaw_riemann_utils.f
 SOURCES = \
   $(HERE)/src/rpn2_geoclaw.f \
   $(HERE)/src/rpt2_geoclaw.f \
+  $(HERE)/src/geoclaw_riemann_utils.f \
   $(HERE)/src/amr2.f90 \
   $(HERE)/src/step2.f90 \
   $(HERE)/src/flux2fw.f \
@@ -67,7 +69,6 @@ SOURCES = \
   $(GEOLIB)/cellgridintegrate2.f \
   $(GEOLIB)/topointegral.f \
   $(GEOLIB)/bilinearintegral.f \
-  $(CLAW)/riemann/src/geoclaw_riemann_utils.f \
   $(GEOLIB)/src2.f90 \
   $(GEOLIB)/src1d.f90 \
   $(GEOLIB)/valout.f \
