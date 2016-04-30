@@ -30,12 +30,10 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
     real(kind=DP) :: uhat,vhat,hhat,roe1,roe3,s1,s2,s3,s1l,s3r
     real(kind=DP) :: delf1,delf2,delf3,dxdcd,dxdcu
     real(kind=DP) :: dxdcm,dxdcp,topo1,topo3,eta
-    real(kind=DP) :: sqhl, sqhr, sqhhat, sqrg
 
     integer :: ixy,maxm,meqn,maux,mwaves,mbc,mx,imp
     integer :: i,m,mw,mu,mv
 
-    sqrg = sqrt(g)
     abs_tol=tol
 
     if (ixy.eq.1) then
@@ -54,25 +52,6 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
         hvl=qr(i-1,mv) 
         hvr=ql(i,mv)
 
-        !===========determine velocity from momentum===========================
-        if (hl<abs_tol) then
-            hl=0.d0
-            ul=0.d0
-            vl=0.d0
-        else
-            ul=hul/hl
-            vl=hvl/hl
-        endif
-
-        if (hr<abs_tol) then
-            hr=0.d0
-            ur=0.d0
-            vr=0.d0
-        else
-            ur=hur/hr
-            vr=hvr/hr
-        endif
-
         do mw=1,mwaves
             s(mw)=0.d0
             beta(mw)=0.d0
@@ -80,11 +59,7 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
                 r(m,mw)=0.d0
             enddo
         enddo
-        dxdcp = 1.d0
-        dxdcm = 1.d0
-
-        if (hl <= tol .and. hr <= tol) go to 90
-
+        
         ! check and see if cell that transverse waves are going in is high and dry
         if (imp.eq.1) then
             eta = qr(i-1,1)  + aux2(i-1,1)
@@ -98,58 +73,7 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
 
         if (eta<max(topo1,topo3)) go to 90
 
-        if (coordinate_system.eq.2) then
-            if (ixy.eq.2) then
-                dxdcp=(earth_radius*deg2rad)
-                dxdcm = dxdcp
-            else
-                if (imp.eq.1) then
-                    dxdcp = earth_radius*cos(aux3(i-1,3))*deg2rad
-                    dxdcm = earth_radius*cos(aux1(i-1,3))*deg2rad
-                else
-                    dxdcp = earth_radius*cos(aux3(i,3))*deg2rad
-                    dxdcm = earth_radius*cos(aux1(i,3))*deg2rad
-                endif
-            endif
-        endif
-
-        !=====Determine some speeds necessary for the Jacobian=================
-        sqhr = sqrt(hr)
-        sqhl = sqrt(hl)
-!---------------------------------------
-#if 1
-        vhat=(vr*sqhr)/(sqhr+sqhl) + (vl*sqhl)/(sqhr+sqhl)
-        uhat=(ur*sqhr)/(sqhr+sqhl) + (ul*sqhl)/(sqhr+sqhl)
-#else
-        ! CAUSES CHANGE
-        vhat=(vr*sqhr + vl*sqhl)/(sqhr+sqhl)
-        uhat=(ur*sqhr + ul*sqhl)/(sqhr+sqhl)
-#endif
-!---------------------------------------
-        hhat=(hr+hl)*0.5d0
-!---------------------------------------
-#if 1
-        roe1=vhat-sqrt(g*hhat)
-        roe3=vhat+sqrt(g*hhat)
-#else
-        ! CAUSES CHANGE
-        sqhhat = sqrg*sqrt((hr+hl)*0.5d0)
-        roe1=vhat-sqhhat
-        roe3=vhat+sqhhat
-#endif
-!---------------------------------------
-#if 1
-        s1l=vl-sqrt(g*hl)
-        s3r=vr+sqrt(g*hr)
-#else
-        ! CAUSES CHANGE
-        s1l=vl-sqrg*sqhl
-        s3r=vr+sqrg*sqhr
-#endif
-
-        s1=min(roe1,s1l)
-        s3=max(roe3,s3r)
-        s2=0.5d0*(s1+s3)
+        call solve_single_rpt(g, tol, hl, hul, hvl, hr, hur, hvr, s1, s2, s3)
 
         s(1)=s1
         s(2)=s2
@@ -187,6 +111,24 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
 !        bpasdq(2,i)=0.0d0
 !        bpasdq(3,i)=0.0d0
 
+        dxdcp = 1.d0
+        dxdcm = 1.d0
+
+        if (coordinate_system.eq.2) then
+            if (ixy.eq.2) then
+                dxdcp=(earth_radius*deg2rad)
+                dxdcm = dxdcp
+            else
+                if (imp.eq.1) then
+                    dxdcp = earth_radius*cos(aux3(i-1,3))*deg2rad
+                    dxdcm = earth_radius*cos(aux1(i-1,3))*deg2rad
+                else
+                    dxdcp = earth_radius*cos(aux3(i,3))*deg2rad
+                    dxdcm = earth_radius*cos(aux1(i,3))*deg2rad
+                endif
+            endif
+        endif
+
         bmasdq(:,i)=0.0d0
         bpasdq(:,i)=0.0d0
         do mw=1,3
@@ -204,3 +146,61 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
     enddo
     return
 end subroutine 
+
+
+subroutine solve_single_rpt(g, tol, hl, hul, hvl, hr, hur, hvr, &
+        s1, s2, s3)
+    implicit none
+    integer, parameter :: DP = kind(1.d0)
+
+    !real(kind=DP), intent(inout) :: dxdcm, dxdcp
+    real(kind=DP), intent(in) :: g, tol, hul, hvl, hur, hvr
+    real(kind=DP), intent(out) :: s1, s2, s3
+    real(kind=DP), intent(inout) :: hl, hr 
+    real(kind=DP) :: ul, vl, ur, vr, roe1, roe3, s1l, s3r,uhat,vhat,hhat, &
+        sqhl, sqhr
+    !===========determine velocity from momentum===========================
+    if (hl<tol) then
+        hl=0.d0
+        ul=0.d0
+        vl=0.d0
+    else
+        ul=hul/hl
+        vl=hvl/hl
+    endif
+
+    if (hr<tol) then
+        hr=0.d0
+        ur=0.d0
+        vr=0.d0
+    else
+        ur=hur/hr
+        vr=hvr/hr
+    endif
+
+
+    if (hl <= tol .and. hr <= tol) then
+        s1 = 0.d0
+        s2 = 0.d0
+        s3 = 0.d0
+    else
+        !=====Determine some speeds necessary for the Jacobian=================
+        sqhr = sqrt(hr)
+        sqhl = sqrt(hl)
+    !---------------------------------------
+        vhat=(vr*sqhr)/(sqhr+sqhl) + (vl*sqhl)/(sqhr+sqhl)
+        uhat=(ur*sqhr)/(sqhr+sqhl) + (ul*sqhl)/(sqhr+sqhl)
+    !---------------------------------------
+        hhat=(hr+hl)*0.5d0
+    !---------------------------------------
+        roe1=vhat-sqrt(g*hhat)
+        roe3=vhat+sqrt(g*hhat)
+    !---------------------------------------
+        s1l=vl-sqrt(g*hl)
+        s3r=vr+sqrt(g*hr)
+
+        s1=min(roe1,s1l)
+        s3=max(roe3,s3r)
+        s2=0.5d0*(s1+s3)
+    endif
+end subroutine
