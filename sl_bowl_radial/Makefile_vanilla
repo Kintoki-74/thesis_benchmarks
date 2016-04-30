@@ -23,7 +23,7 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -O2 -ipo -pg#-align array32byte -qopenmp-simd -xavx 
+FFLAGS ?= -O2 -ipo -fp-model=precise#-align array32byte -qopenmp-simd -xavx 
 LFLAGS ?= -qopenmp-stubs -pg
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)

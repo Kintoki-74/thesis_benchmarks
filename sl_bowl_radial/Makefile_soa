@@ -22,8 +22,8 @@ RESTART = False
 
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 #-no-simd -no-vec -fp-model=precise -O2 -ipo -align array32byte # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= -pg -O2 -ipo -align array32byte -qopenmp-simd -xavx -qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2,solve_single_layer_rp,riemann_fwave -qopt-report-file=VECREPORT.optrpt
-LFLAGS ?= -qopenmp-simd -qopenmp-stubs -pg
+FFLAGS ?= -O2 -ipo -align array32byte -qopenmp-simd -xavx -fp-model=precise #-qopt-report=5 -qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2,solve_single_layer_rp,riemann_fwave -qopt-report-file=VECREPORT.optrpt
+LFLAGS ?= -qopenmp-simd -qopenmp-stubs
 INCLUDE += $(TACC_PAPI_INC)
 LIB_PATHS += $(TACC_PAPI_LIB)
 # ---------------------------------

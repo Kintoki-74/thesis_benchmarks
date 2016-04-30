@@ -44,8 +44,8 @@ def topo(x,y):
 
 def qinit(x,y):
     from numpy import where
-    z = x*0.-10.
-    #z = x*0.+where(sqrt(x*x + y*y) < 20., 3., 0.)
+    #z = x*0.-10.
+    z = x*0.+where(sqrt(x*x + y*y) < 20., 3., 0.)
     return z
 
 if __name__=='__main__':

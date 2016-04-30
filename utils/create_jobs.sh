@@ -1,12 +1,13 @@
 #!/bin/bash
 
-NAME="chile_soa_papi_precise_inlinerp"
-#NAME="chile_vanilla_fp_precise_max1d60"
+#NAME="chile_soa_papi_precise_inlinerp"
+NAME="wet_vanilla_fp_precise_max1d400"
 COMPILERS=("ifort")
 
-FLAGS=("-O2 -ipo -xavx -qopenmp-simd -align array32byte -fp-model=precise -DUSEPAPI") 
-RESOLUTIONS=("900" "700" "500" "300" "100" "050") # Check that amr_module.f90:max1d is set properly 
-#RESOLUTIONS=("30")
+#FLAGS=("-O2 -ipo -xavx -qopenmp-simd -align array32byte -fp-model=precise -DUSEPAPI")  # SOA
+FLAGS=("-O2 -ipo -fp-model=precise") # Vanilla
+#RESOLUTIONS=("900" "700" "500" "300" "100" "050") # Check that amr_module.f90:max1d is set properly 
+RESOLUTIONS=("100")
 amrlevels=1
 
 # GCC: -fno-finite-math-only -fmath-errno -ftrapping-math -fsignaling-nans -fno-rounding-math"
