@@ -1,15 +1,15 @@
 #!/bin/bash
 
-NAME="chile_soa_gprof_inlinerp"
+NAME="chile_soa_papi_precise_inlinerp"
+#NAME="chile_vanilla_fp_precise_max1d60"
 COMPILERS=("ifort")
-#COMPILERS=("gfortran")
 
-#FLAGS=("-O2 -pg" "-xavx" "-O3" "-ipo" "-O2 -pg -fp-model=precise" "-ipo -fp-model=precise")
-#FLAGS=("-O2 -ipo -pg") # -fno-finite-math-only -fmath-errno -ftrapping-math -fsignaling-nans -fno-rounding-math")
-FLAGS=("-O2 -ipo -align array32byte -qopenmp-simd -xavx -pg")
+FLAGS=("-O2 -ipo -xavx -qopenmp-simd -align array32byte -fp-model=precise -DUSEPAPI") 
 RESOLUTIONS=("900" "700" "500" "300" "100" "050") # Check that amr_module.f90:max1d is set properly 
-# TODO: TRESOLUTIONS=(...)
+#RESOLUTIONS=("30")
+amrlevels=1
 
+# GCC: -fno-finite-math-only -fmath-errno -ftrapping-math -fsignaling-nans -fno-rounding-math"
 function usage
 {
     echo "Usage: ./create_jobs [all|make|runs]"
@@ -42,29 +42,33 @@ function main
             # If "all" or "compile" was selected, compile if no binary exists
             if [[ $1 == "all" || $1 == "make" ]]; then
                 cd $tmpdir
+                yesno="y"
                 if [[ -f $binname ]]; then
                     echo "Directory $tmpdir already exists. Rebuild?"
                     read yesno
                     if [[ $yesno != "y" ]]; then
                         echo "Skipping..."
-                        continue
+                        skip=true
                     fi
                 fi
-                echo "=== BUILDING NEW EXECUTABLE! THIS MIGHT TAKE SOME TIME ==="
-                echo -n "Will build $binname with flags \"$flags\" in "
-                for i in {1..1} #{3..1}
-                do
-                    echo -n "$i... "
-                    sleep 1
-                done
-                echo
-                echo "Building $binname..."
-                if make new > /dev/null
-                then
-                    echo "Done!"
-                else
-                    echo "Build error. Aborting."
-                    exit
+
+                if [[ $yesno == "y" ]]; then
+                    echo "=== BUILDING NEW EXECUTABLE! THIS MIGHT TAKE SOME TIME ==="
+                    echo -n "Will build $binname with flags \"$flags\" in "
+                    for i in {1..1} #{3..1}
+                    do
+                        echo -n "$i... "
+                        sleep 1
+                    done
+                    echo
+                    echo "Building $binname..."
+                    if make new > /dev/null
+                    then
+                        echo "Done!"
+                    else
+                        echo "Build error. Aborting."
+                        exit
+                    fi
                 fi
                 cd -
             fi 
@@ -82,7 +86,7 @@ function main
                 cp maketopo.py $dirname # This is needed to create topography files
                 # Change grid resolution in setrun.py and set AMR levels to 1
                 sed -r -e "s/( *clawdata\.num_cells\[[01]\] *= *).*$/\1${res}/g" \
-                       -e "s/( *amrdata.amr_levels_max *= *).*$/\11/g" \
+                       -e "s/( *amrdata.amr_levels_max *= *).*$/\1${amrlevels}/g" \
                     setrun.py > $dirname/setrun.py
 
                 # Change job file's job name and error and output file names, respectively.

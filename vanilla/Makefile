@@ -23,17 +23,18 @@ RESTART = False
 # Environment variable FC should be set to fortran compiler, e.g. gfortran
 
 # Compiler flags can be specified here or set as an environment variable
-FFLAGS ?= #-xavx -fp-model=precise
+FFLAGS ?= -O2 -ipo -fp-model=precise
 # ---------------------------------
 # List of sources for this program:
 # ---------------------------------
 
 AMRLIB = $(CLAW)/amrclaw/src/2d
 GEOLIB = $(CLAW)/geoclaw/src/2d/shallow
+HERE = .
 
 MODULES = \
  $(GEOLIB)/utility_module.f90 \
- $(AMRLIB)/amr_module.f90 \
+ $(HERE)/src/amr_module.f90 \
  $(AMRLIB)/regions_module.f90 \
  $(GEOLIB)/geoclaw_module.f90 \
  $(GEOLIB)/gauges_module.f90 \
