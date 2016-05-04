@@ -4,6 +4,7 @@
 */_output*
 */_plots
 *.o
+fort.*
 *.mod
 .*
 *.optrpt
