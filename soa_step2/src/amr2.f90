@@ -832,7 +832,7 @@ program amr2
     close(outunit)
     close(dbugunit)
 #ifdef USEPAPI
-    call papi_summary("RPN2")
+    call papi_summary("RPT2")
 #endif
 
 end program amr2

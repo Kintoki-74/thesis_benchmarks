@@ -14,7 +14,7 @@ else
 fi
 
 filename="${scenarioname}_values"
-echo "Writing to ${filename}..."
+echo "Writing to ${filename} ..."
 #echo -e "N\t Calls\t Time\t GFLOPS\t Rims" > $filename
 > $filename
 for f in `ls run_${scenarioname}${soaversion}*/_output/riemannstats.log`;

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J WET_SOA        # job name
-#SBATCH -o WET_SOA_OUT_%j # output file name (%j expands to jobID)
-#SBATCH -e WET_SOA_ERR_%j # error file name (%j expands to jobID)
+#SBATCH -J WET_SOA_PRECISE        # job name
+#SBATCH -o WET_SOA_PRECISE_OUT_%j # output file name (%j expands to jobID)
+#SBATCH -e WET_SOA_PRECISE_ERR_%j # error file name (%j expands to jobID)
 #SBATCH -N 1                # total number of nodes requested (16 cores/node)
 #SBATCH -n 1                # 1 task
 #SBATCH -p normal # queue (partition) -- normal, development, etc.

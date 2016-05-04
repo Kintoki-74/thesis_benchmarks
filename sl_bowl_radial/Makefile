@@ -1,1 +1,1 @@
-Makefile_soa
+Makefile_vanilla

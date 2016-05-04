@@ -26,6 +26,7 @@ for s in ${srs[@]}; do
     do
         n=`echo $d | sed -e 's/.*_\([0-9]*\)__.*/\1/'`;
         line=`gprof $d/xgeoclaw* $d/_output/gmon.out | grep "^ *[0-9].* ${s}_$"`
+        #echo $n $line
 
         subroutine=`grep -oE '[^ ]+$' <<< ${line};`
         percentage=`sed -e "s/ *\([0-9\.]*\).*/\1/" <<< ${line}`;

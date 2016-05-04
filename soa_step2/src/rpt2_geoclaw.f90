@@ -28,7 +28,7 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
     real(kind=DP) :: abs_tol
     real(kind=DP) :: hl,hr,hul,hur,hvl,hvr,vl,vr,ul,ur,bl,br
     real(kind=DP) :: uhat,vhat,hhat,roe1,roe3,s1,s2,s3,s1l,s3r
-    real(kind=DP) :: delf1,delf2,delf3,dxdcd,dxdcu
+    real(kind=DP) :: delf1,delf2,delf3
     real(kind=DP) :: dxdcm,dxdcp,topo1,topo3,eta
 
     integer :: ixy,maxm,meqn,maux,mwaves,mbc,mx,imp
@@ -44,6 +44,9 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
         mv = 2
     endif
 
+    !DIR$ VECTOR ALIGNED
+    !$OMP SIMD PRIVATE(hl,hr,hul,hur,hvl,hvr,s1,s2,s3, &
+    !$OMP& dxdcm,dxdcp,delf1,delf2,delf3,topo1,topo3,beta,s,r)
     do i=2-mbc,mx+mbc
         hl=qr(i-1,1) 
         hr=ql(i,1) 
@@ -71,7 +74,10 @@ subroutine rpt2(ixy,imp,maxm,meqn,mwaves,maux,mbc,mx, &
             topo3 = aux3(i,1)
         endif
 
-        if (eta<max(topo1,topo3)) go to 90
+        if (eta<max(topo1,topo3)) then
+            hl = 0.d0
+            hr = 0.d0
+        endif 
 
         call solve_single_rpt(g, tol, hl, hul, hvl, hr, hur, hvr, s1, s2, s3)
 

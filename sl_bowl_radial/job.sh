@@ -1,1 +1,1 @@
-job_soa.sh
+job_vanilla.sh

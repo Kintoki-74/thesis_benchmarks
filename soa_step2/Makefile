@@ -24,7 +24,7 @@ RESTART = False
 
 # Compiler flags can be specified here or set as an environment variable
 #FFLAGS ?= -pg -qopenmp-simd -O2 -ipo -align array32byte -xavx #-qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2,solve_single_layer_rp,riemann_fwave -qopt-report-file=VECREPORT.optrpt
-FFLAGS ?= -DUSEPAPI -qopenmp-simd -O2 -ipo -align array32byte -xavx -fp-model=precise #-qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2,solve_single_layer_rp,riemann_fwave -qopt-report-file=VECREPORT.optrpt
+FFLAGS ?= -DUSEPAPI -qopenmp-simd -O2 -ipo -align array32byte -xavx #-qopt-report-phase=vec,loop,ipo -qopt-report-routine=rpn2,solve_single_layer_rp,riemann_fwave -qopt-report-file=VECREPORT.optrpt
 
 #-qopenmp-stubs -qopenmp-simd 
 #LFLAGS ?= -qopenmp-simd -qopenmp-stubs -pg
